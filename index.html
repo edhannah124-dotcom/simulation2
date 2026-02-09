@@ -692,11 +692,35 @@
         outdoor: { pm25_out: 0 },
         simTotalMinutes: 45,
         advancedParams: {
-            UA: 150, Qocc_per: 80, Qsolar_base: 500, betaSolar: 0.7, Plight: 200, P_light_dev: 80, K: 1200, COP: 3.2, Qmax: 8000,
-            eco2: 5e-6, Epm: 2, kdep: 0.0001, Evoc: 0.03, kvoc: 0.00005,
-            Eon: 350, L_base: 40, L_occ_per: 25, L_mic: 35, tau_noise: 30,
-            rho: 1.2, cp: 1005, Patm: 101325,
-            eta_vent: 0.6
+            UA: 150,
+            Qocc_per: 80,
+            Qsolar_base: 500,
+            betaSolar: 0.7,        // 作为太阳遮阳效率 λsolar (0~1)
+            Plight: 200,           // 灯具热负荷 (W)
+            P_light_dev: 80,       // 灯具电功率 (W)
+            Eon: 350,              // 灯具最大照度 (lux)
+            eco2: 5e-6,            // CO2 呼出体积流量 (m3/s/人)
+            gw: 1e-5,              // 水汽产生 (kg/s/人)
+            Epm: 2,                // 作为 e_occ (μg/s/人)
+            kdep: 0.0001,          // 颗粒沉降 (1/s)
+            Evoc: 0.03,            // 作为 E_base (mg/s)
+            kvoc: 0.00005,         // VOC 衰减 (1/s)
+
+            L_base: 40,            // L1_quiet (dB)
+            L_occ_per: 25,         // ΔL_act (dB)
+            L_mic: 80,             // 作为 L_spk,max (dB)
+            tau_noise: 30,         // 噪声时间常数 (s)
+
+            Qmax: 8000,            // 空调最大热功率 (W)
+            K: 1200,               // 保留(不影响界面/逻辑)，当前用于兼容
+            COP: 3.2,              // COP
+            Ddehum: 0.00008,       // 除湿能力 (kg/s)
+
+            rho: 1.2,
+            cp: 1005,
+            Patm: 101325,
+
+            eta_vent: 0.6          // HVAC 滤除效率 η (0~1)
         },
         lastSimData: null,
         problemText: null
@@ -741,7 +765,7 @@
     function updateDeviceUI(key, value) {
         const el = document.getElementById(key);
         if(el) {
-            if(el.type === 'checkbox') el.checked = value;
+            if(el.type === 'checkbox') el.checked = !!value;
             else el.value = value;
         }
         if(key === 'acTemp') document.getElementById('label_acTemp').innerText = parseFloat(value).toFixed(1) + '℃';
@@ -751,13 +775,25 @@
         if(key === 'spkVol') document.getElementById('label_spkVol').innerText = value;
     }
 
+    /* 数据类型：数值类全部落成 number，开关类落成 boolean */
     function commitDeviceChange(key, newVal) {
+        const numKeys = new Set(['acTemp','winRatio','curtain','lightPct','spkVol']);
+        const boolKeys = new Set(['acMaster','acDehum','spkMaster']);
+        if (boolKeys.has(key)) {
+            state.deviceControls[key] = !!newVal;
+            return;
+        }
+        if (numKeys.has(key)) {
+            const v = parseFloat(newVal);
+            state.deviceControls[key] = isNaN(v) ? 0 : v;
+            return;
+        }
         state.deviceControls[key] = newVal;
     }
 
     function toggleDevice(key, checked) {
         updateDeviceUI(key, checked);
-        state.deviceControls[key] = checked;
+        state.deviceControls[key] = !!checked;
     }
 
     function setBtnGroup(groupKey, val) {
@@ -948,18 +984,6 @@
         return isNaN(v) ? fallback : v;
     }
 
-    function ventAchFromFanLevel(level) {
-        if (level === 'LOW') return 1;
-        if (level === 'MID') return 3;
-        if (level === 'HIGH') return 6;
-        return 0;
-    }
-
-    function windowAchFromRatio(ratioPct) {
-        const r = clamp(ratioPct, 0, 100) / 100;
-        return 4 * r;
-    }
-
     function computeIssuesFromMetrics(m) {
         const issues = [];
         if (m.T > THRESHOLDS.temp.max) issues.push("室温过高");
@@ -1066,32 +1090,29 @@
     function getComplianceInfo(minute) {
         if (!state.lastSimData || !state.lastSimData.t) return "达标项：-/4";
         const m = getMetricsAtIndex(state.lastSimData, minute);
-        
+
         const tOk = (m.T >= THRESHOLDS.temp.min && m.T <= THRESHOLDS.temp.max);
         const rOk = (m.RH >= THRESHOLDS.rh.min && m.RH <= THRESHOLDS.rh.max);
         const aOk = (m.CO2 <= THRESHOLDS.co2.max && m.PM <= THRESHOLDS.pm25.max);
         const lOk = (m.Lux >= THRESHOLDS.lux.min && m.Noise <= THRESHOLDS.noise.max);
-        
+
         const count = [tOk, rOk, aOk, lOk].filter(Boolean).length;
         const mark = (ok) => ok ? '√' : '×';
-        
+
         return `达标项：${count}/4（温度${mark(tOk)} 湿度${mark(rOk)} 空气${mark(aOk)} 声光${mark(lOk)}）`;
     }
 
     function getResolvedInfo(startMin, endMin) {
         if (!state.lastSimData || !state.lastSimData.t) return "解决问题：无";
-        
-        // startMin 问题集
+
         const mStart = getMetricsAtIndex(state.lastSimData, startMin);
         const issuesStart = computeIssuesFromMetrics(mStart);
-        
-        // endMin 问题集
+
         const mEnd = getMetricsAtIndex(state.lastSimData, endMin);
         const issuesEnd = computeIssuesFromMetrics(mEnd);
-        
-        // start 有但 end 没有的
+
         const resolved = issuesStart.filter(i => !issuesEnd.includes(i));
-        
+
         return `解决问题：${resolved.length > 0 ? resolved.join('、') : '无'}`;
     }
 
@@ -1108,17 +1129,15 @@
             return;
         }
 
-        // 1. 发现问题条目
         const problem = state.problemText ? state.problemText : "暂无问题";
         const problemDiv = document.createElement('div');
         const problemOk = (problem === "暂无问题");
         problemDiv.className = `p-2 rounded border ${problemOk ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-red-50 text-red-800 border-red-200'} log-entry-new`;
-        
+
         const comp0 = getComplianceInfo(0);
         problemDiv.innerText = `发现问题：${problem}。解决问题：无。${comp0}`;
         container.appendChild(problemDiv);
 
-        // 2. 策略条目
         for (let i = 0; i < state.interventions.length; i++) {
             const ev = state.interventions[i];
             const div = document.createElement('div');
@@ -1127,7 +1146,7 @@
             const baseText = `策略${i+1}：${ev.startMin}–${ev.endMin}min ${summarizeControlsForStrategy(ev.controls)}`;
             const resText = getResolvedInfo(ev.startMin, ev.endMin);
             const compText = getComplianceInfo(ev.endMin);
-            
+
             const fullText = `${baseText}。${resText}。${compText}`;
 
             div.innerHTML = `
@@ -1230,7 +1249,144 @@
         }
     }
 
-    /* === Simulation Logic (PM2.5 动力学 + 干预区间应用) === */
+    /* === 公式工具：光照/通风/热湿/PM2.5/CO2/VOC/噪声/功率 === */
+
+    function fanUFromLevel(level) {
+        if (level === 'LOW') return 0.30;
+        if (level === 'MID') return 0.60;
+        if (level === 'HIGH') return 1.00;
+        return 0.0;
+    }
+
+    function computeVentilationFlows(V, uFan, omegaWin) {
+        // 根据教室体积做一个自适应的最大流量（不改界面，只改模型）
+        const Vdot_hvac_max = clamp(0.0012 * V, 0.08, 0.50);   // m3/s
+        const Vdot_win_max  = clamp(0.0015 * V, 0.10, 0.70);   // m3/s
+        const Vdot_inf      = clamp(0.00010 * V, 0.005, 0.06); // m3/s
+
+        const VdotHVAC = Vdot_hvac_max * clamp(uFan, 0, 1);
+        const VdotWin  = clamp(omegaWin, 0, 1) * Vdot_win_max;
+
+        return {
+            VdotHVAC,
+            VdotWin,
+            VdotInf: Vdot_inf,
+            Vdot: Math.max(0, VdotHVAC + VdotWin + Vdot_inf)
+        };
+    }
+
+    function skyIlluminance(minute, totalMin, Emax) {
+        // E_sky(t) = E_max * sin(pi*(t-tr)/(ts-tr))^p, p 取常量 2.2
+        const p_sky = 2.2;
+        if (totalMin <= 0) return 0;
+        const x = clamp(minute / totalMin, 0, 1);
+        const s = Math.sin(Math.PI * x);
+        if (s <= 0) return 0;
+        return Math.max(0, Emax) * Math.pow(s, p_sky);
+    }
+
+    function solarGain(Esky, Emax, QsolarMax, lambdaSky, uShade) {
+        // Qsolar = Qsolar_max * (Esky/Emax) * (1 - lambdaSky * uShade)
+        const denom = Math.max(1, Emax);
+        const shadeEff = clamp(lambdaSky, 0, 1) * clamp(uShade, 0, 1);
+        return Math.max(0, QsolarMax) * (Esky / denom) * (1 - shadeEff);
+    }
+
+    function satVapourPressurePa(Tc) {
+        // Tetens 公式，单位 Pa
+        const T = Tc;
+        return 610.78 * Math.exp((17.2694 * T) / (T + 237.29));
+    }
+
+    function absHumFromRH(Tc, RH, Patm) {
+        // G = e / (R_w * T_k)
+        const Rw = 461.5;
+        const Tk = Tc + 273.15;
+        const pws = satVapourPressurePa(Tc);
+        const e = clamp(RH, 0, 100) / 100 * pws;
+        return Math.max(0, e / (Rw * Tk));
+    }
+
+    function rhFromAbsHum(Tc, G, Patm) {
+        const Rw = 461.5;
+        const Tk = Tc + 273.15;
+        const pws = satVapourPressurePa(Tc);
+        const e = Math.max(0, G) * Rw * Tk;
+        const rh = (pws > 0) ? (100 * e / pws) : 0;
+        return clamp(rh, 0, 100);
+    }
+
+    function vocEmission(Ebase, Tc, RH) {
+        // E_form = E_base * exp(beta_T*(T-Tref) + beta_RH*(RH-RHref))
+        const betaT = 0.05;
+        const betaRH = 0.01;
+        const Tref = 25;
+        const RHref = 50;
+        const expo = betaT * (Tc - Tref) + betaRH * (RH - RHref);
+        return Math.max(0, Ebase) * Math.exp(expo);
+    }
+
+    function dbToI(L) {
+        if (!isFinite(L)) return 0;
+        return Math.pow(10, L / 10);
+    }
+
+    function intensitySum(dBList) {
+        let I = 0;
+        for (let i = 0; i < dBList.length; i++) I += dbToI(dBList[i]);
+        return Math.max(I, 1e-12);
+    }
+
+    function speakerNoiseDb(Lmax, u) {
+        // L_spk = Lmax + 10log10(u), u=0 时 -inf
+        const uu = clamp(u, 0, 1);
+        if (uu <= 0) return -Infinity;
+        return Lmax + 10 * Math.log10(uu);
+    }
+
+    function fanNoiseDb(Lmax, u) {
+        const uu = clamp(u, 0, 1);
+        if (uu <= 0) return -Infinity;
+        return Lmax + 10 * Math.log10(uu);
+    }
+
+    function outdoorNoiseIndoorDb(Lout, omegaWin, uCurtClose) {
+        // L_out,in = Lout - (A_window + A_curtain)
+        // A_window = A_closed - ω(A_closed - A_open)
+        // A_curtain = α * A_curtmax (α 为窗帘闭合度)
+        const omega = clamp(omegaWin, 0, 1);
+        const alpha = clamp(uCurtClose, 0, 1);
+
+        const A_closed = 25;
+        const A_open = 5;
+        const A_curtmax = 5;
+
+        const A_window = A_closed - omega * (A_closed - A_open);
+        const A_curt = alpha * A_curtmax;
+
+        return Lout - (A_window + A_curt);
+    }
+
+    function spkPower(u) {
+        // 经验型：音箱功耗与音量非线性，保持可控
+        const uu = clamp(u, 0, 1);
+        const Pmax = 60;
+        const Pidle = 5;
+        return (uu <= 0) ? 0 : (Pidle + Pmax * uu * uu);
+    }
+
+    function fanPower(u) {
+        // P_fan = Pmax * u^3
+        const uu = clamp(u, 0, 1);
+        const Pmax = 200;
+        return Pmax * Math.pow(uu, 3);
+    }
+
+    function occNoiseDb(Lquiet, dLact, uAct) {
+        return (Lquiet ?? 40) + clamp(uAct, 0, 1) * (dLact ?? 20);
+    }
+
+    /* === Simulation Logic (替换为当前模型公式) === */
     function runSimulation() {
         const adv = state.advancedParams;
 
@@ -1243,6 +1399,7 @@
             Pout: safeNum('outPM', (state.outdoor.pm25_out > 0 ? state.outdoor.pm25_out : 30)),
             Vout: 0.03,
             Eday: safeNum('naturalLight', 1000),
+
             T_init: safeNum('initTemp', 25),
             RH_init: safeNum('initRH', 50),
             C_init: safeNum('initCO2', 450),
@@ -1259,135 +1416,149 @@
         const res = { t:[], rh:[], co2:[], pm:[], tvoc:[], lux:[], noise:[], power:[], energy:[] };
 
         let T = inputs.T_init;
-        let RH = inputs.RH_init;
         let C = inputs.C_init;
         let P = inputs.P_init;
         let Voc = inputs.Voc_init;
 
-        let I_noise = Math.pow(10, adv.L_base/10);
+        let G = absHumFromRH(T, inputs.RH_init, adv.Patm);              // kg/m3
+        const Gout = absHumFromRH(inputs.Tout, inputs.RHout, adv.Patm); // kg/m3
+
+        let Ieq = Math.pow(10, (adv.L_base ?? 40) / 10);
         let Energy_total = 0;
 
         for (let i = 0; i < totalSteps; i++) {
             const minute = i;
+            const dev = getActiveControlsAtMinute(minute);
 
+            const omegaWin = clamp(devNum(dev, 'winRatio', 0) / 100, 0, 1);
+            const uCurtOpen = clamp(devNum(dev, 'curtain', 0) / 100, 0, 1);
+            const uCurtClose = 1 - uCurtOpen;
+
+            const uLamp = clamp(devNum(dev, 'lightPct', 0) / 100, 0, 1);
+
+            const spkOn = devBool(dev, 'spkMaster', true);
+            const uSpk = spkOn ? clamp(devNum(dev, 'spkVol', 0) / 100, 0, 1) : 0;
+
+            const uFan = fanUFromLevel(dev.ventFan || 'OFF');
+            const flows = computeVentilationFlows(inputs.V, uFan, omegaWin);
+            const VdotHVAC = flows.VdotHVAC;
+            const Vdot = flows.Vdot;
+
+            /* 光照：E_total = E_natural + E_artificial */
+            const Esky = skyIlluminance(minute, T_total_minutes, inputs.Eday);
+            const E_natural = omegaWin * uCurtOpen * Esky;
+            const E_art = uLamp * (adv.Eon ?? 350);
+            const Lux = E_natural + E_art;
+
+            /* 太阳得热：Qsolar(t) */
+            const Qsolar = solarGain(Esky, inputs.Eday, (adv.Qsolar_base ?? 0), (adv.betaSolar ?? 0), uCurtClose);
+
+            /* 活动强度：用于 PM / 人员热 / 人员噪声 */
+            const uAct = clamp(0.30 + 0.70 * uSpk, 0, 1);
+
+            /* 室内发热：Qint = Qocc + Qeq */
+            const Qocc = inputs.N * uAct * (adv.Qocc_per ?? 80);
+            const P_spk_elec = spkPower(uSpk);
+            const Qeq = (adv.Plight ?? 0) * uLamp + 0.70 * P_spk_elec;
+            const Qint = Qocc + Qeq;
+
+            /* 空调热功率：Q_HVAC = (UA + ρcp Vdot)(Tin - Tout) - (Qint + Qsolar)，Tin 用 Tset */
+            let Q_HVAC = 0;
+            const acOn = devBool(dev, 'acMaster', true);
+            if (acOn) {
+                const Tset = devNum(dev, 'acTemp', 25.5);
+                const UAeff = (adv.UA ?? 150) + (adv.rho ?? 1.2) * (adv.cp ?? 1005) * Vdot;
+                const Qreq = UAeff * (Tset - inputs.Tout) - (Qint + Qsolar);
+                Q_HVAC = clamp(Qreq, -(adv.Qmax ?? 8000), (adv.Qmax ?? 8000));
+            }
+
+            /* 温度：ρcpV dT/dt = Q_HVAC + UA(Tout-T) + ρcpVdot(Tout-T) + Qint + Qsolar */
+            const heatSum = Q_HVAC
+                + (adv.UA ?? 150) * (inputs.Tout - T)
+                + (adv.rho ?? 1.2) * (adv.cp ?? 1005) * Vdot * (inputs.Tout - T)
+                + Qint + Qsolar;
+
+            const dTdt = heatSum / ((adv.rho ?? 1.2) * (adv.cp ?? 1005) * inputs.V);
+            const next_T = T + dTdt * dtSec;
+
+            /* 湿度：绝对湿度 G 动力学，再换算 RH */
+            const RH = rhFromAbsHum(T, G, adv.Patm);
+
+            const dehumOn = (acOn && devBool(dev, 'acDehum', false)) ? 1 : 0;
+            const Gdehum = (adv.Ddehum ?? 0) * dehumOn; // kg/s
+            const Ghum = 0; // 当前界面不加加湿设备
+
+            const dGdt =
+                (inputs.N * (adv.gw ?? 0) / inputs.V) +
+                (Vdot / inputs.V) * (Gout - G) +
+                (Ghum - Gdehum) / inputs.V;
+
+            const next_G = Math.max(0, G + dGdt * dtSec);
+            const next_RH = rhFromAbsHum(next_T, next_G, adv.Patm);
+
+            /* CO2：dC/dt = (1e6/V)*N*e_CO2 + (Vdot/V)(Cout - C) */
+            const dCdt = (1e6 / inputs.V) * inputs.N * (adv.eco2 ?? 0) + (Vdot / inputs.V) * (inputs.Cout - C);
+            const next_C = Math.max(0, C + dCdt * dtSec);
+
+            /* PM2.5：dP/dt = N*a*e_occ/V + (Vdot/V)(Pout - P) - (η*Vdot_HVAC/V + kdep)*P */
+            const e_occ = (adv.Epm ?? 0);   // μg/s/人
+            const kdep = (adv.kdep ?? 0);   // 1/s
+            const dPdt =
+                (inputs.N * uAct * e_occ / inputs.V) +
+                (Vdot / inputs.V) * (inputs.Pout - P) -
+                ((etaVent * VdotHVAC) / inputs.V + kdep) * P;
+            const next_P = Math.max(0, P + dPdt * dtSec);
+
+            /* VOC：dV/dt = E_form/V - k_loss*V + (Vdot/V)(Vout - V) */
+            const Eform = vocEmission((adv.Evoc ?? 0), T, RH);
+            const dVocdt =
+                (Eform / inputs.V) -
+                (adv.kvoc ?? 0) * Voc +
+                (Vdot / inputs.V) * (inputs.Vout - Voc);
+            const next_Voc = Math.max(0, Voc + dVocdt * dtSec);
+
+            /* 噪声：分贝能量叠加 + 一阶平滑 */
+            const L_occ = occNoiseDb((adv.L_base ?? 40), (adv.L_occ_per ?? 20), uAct);
+
+            const L_spk = speakerNoiseDb((adv.L_mic ?? 80), uSpk);
+
+            const L_hvac_max = 55;
+            const L_hvac = fanNoiseDb(L_hvac_max, uFan);
+
+            const L_out = 65;
+            const L_out_in = outdoorNoiseIndoorDb(L_out, omegaWin, uCurtClose);
+
+            const I_target = intensitySum([L_occ, L_spk, L_hvac, L_out_in]);
+            const tau = Math.max(1, (adv.tau_noise ?? 30));
+            Ieq = Ieq + (dtSec / tau) * (I_target - Ieq);
+            const Noise = 10 * Math.log10(Math.max(Ieq, 1e-12));
+
+            /* 功率：P_total = P_HVAC + P_lamp + P_fan + P_speaker */
+            const P_HVAC_elec = acOn ? (Math.abs(Q_HVAC) / Math.max(0.1, (adv.COP ?? 3.2))) : 0;
+            const P_lamp = (adv.P_light_dev ?? 0) * uLamp;
+            const P_fan = fanPower(uFan);
+            const Power_t = P_HVAC_elec + P_lamp + P_fan + P_spk_elec;
+
+            /* 输出（当前时刻） */
             res.t.push(T);
             res.rh.push(RH);
             res.co2.push(C);
             res.pm.push(P);
             res.tvoc.push(Voc);
-
-            if (i === totalSteps - 1) {
-                const devEnd = getActiveControlsAtMinute(Math.max(0, minute - 1));
-                const uCurtain = 1 - (devNum(devEnd, 'curtain', 0) / 100);
-                const E_light = adv.Eon * (devNum(devEnd, 'lightPct', 0) / 100);
-                const alphaCurtain = 0.9;
-                const Lux = E_light + inputs.Eday * (1 - alphaCurtain * uCurtain);
-                res.lux.push(Lux);
-
-                const s_spk = devBool(devEnd, 'spkMaster', true) ? 1 : 0;
-                const L_spk = 45 + 35 * (devNum(devEnd, 'spkVol', 0) / 100);
-                const I_target = Math.pow(10, adv.L_base/10) + inputs.N * Math.pow(10, adv.L_occ_per/10) + s_spk * Math.pow(10, L_spk/10);
-                const L_noise = 10 * Math.log10(Math.max(I_noise, 1e-12));
-                res.noise.push(clamp(L_noise, 0, 120));
-
-                const acOn = devBool(devEnd, 'acMaster', true);
-                const acTemp = devNum(devEnd, 'acTemp', 25.5);
-                let Q_HVAC = 0;
-                if (acOn) {
-                    const err = acTemp - T;
-                    let req = adv.K * err;
-                    req = clamp(req, -adv.Qmax, adv.Qmax);
-                    Q_HVAC = req;
-                }
-                const P_ac_elec = Math.abs(Q_HVAC) / adv.COP;
-                const P_light_eff = adv.P_light_dev * (devNum(devEnd, 'lightPct', 0) / 100);
-                const P_spk_eff = s_spk * (10 + devNum(devEnd, 'spkVol', 0) * 0.5);
-                const Power_t = P_ac_elec + P_light_eff + P_spk_eff;
-                res.power.push(Power_t);
-                res.energy.push(Energy_total);
-                break;
-            }
-
-            const dev = getActiveControlsAtMinute(minute);
-
-            const ach_vent = ventAchFromFanLevel(dev.ventFan || 'OFF');
-            const ach_win = windowAchFromRatio(devNum(dev, 'winRatio', 0));
-            const Q_vent = (ach_vent / 3600) * inputs.V;
-            const Q_win = (ach_win / 3600) * inputs.V;
-            const Q_total = Math.max(0, Q_vent + Q_win);
-
-            const Epm = adv.Epm;
-            const kdep = adv.kdep;
-
-            const dP =
-                (Epm / inputs.V) +
-                (Q_vent / inputs.V) * (((1 - etaVent) * inputs.Pout) - P) +
-                (Q_win / inputs.V) * (inputs.Pout - P) -
-                (kdep * P);
-
-            const next_P = Math.max(0, P + dtSec * dP);
-
-            const dC = (1e6/inputs.V) * inputs.N * adv.eco2 + (Q_total/inputs.V) * (inputs.Cout - C);
-            const next_C = Math.max(0, C + dC * dtSec);
-
-            const dV = (adv.Evoc/inputs.V) + (Q_total/inputs.V)*(inputs.Vout - Voc) - adv.kvoc*Voc;
-            const next_Voc = Math.max(0, Voc + dV * dtSec);
-
-            const u_curtain = 1 - (devNum(dev, 'curtain', 0) / 100);
-            const E_light = adv.Eon * (devNum(dev, 'lightPct', 0) / 100);
-
-            const Q_occ = inputs.N * adv.Qocc_per;
-            const Q_solar = adv.Qsolar_base * (1 - adv.betaSolar * u_curtain);
-            const Q_light = adv.Plight * (devNum(dev, 'lightPct', 0) / 100);
-
-            let Q_HVAC = 0;
-            if (devBool(dev, 'acMaster', true)) {
-                const acTemp = devNum(dev, 'acTemp', 25.5);
-                const err = acTemp - T;
-                let req = adv.K * err;
-                req = clamp(req, -adv.Qmax, adv.Qmax);
-                Q_HVAC = req;
-            }
-
-            const term_heat_vent = 1200 * Q_total * (inputs.Tout - T);
-            const heat_sum = Q_HVAC + adv.UA*(inputs.Tout - T) + Q_occ + Q_solar + Q_light + term_heat_vent;
-            const dT = (heat_sum * dtSec) / (adv.rho * adv.cp * inputs.V);
-            const next_T = T + dT;
-
-            let targetRH = inputs.RHout;
-            if (devBool(dev, 'acMaster', true) && devBool(dev, 'acDehum', false)) targetRH = 40;
-            const mixing = ((ach_vent + ach_win) / Math.max(1, T_total_minutes)) * 0.05;
-            let next_RH = RH + (targetRH - RH) * mixing;
-            if (dT > 0) next_RH -= 0.2;
-            if (dT < 0) next_RH += 0.2;
-            next_RH = clamp(next_RH, 0, 100);
-
-            const alphaCurtain = 0.9;
-            const Lux = E_light + inputs.Eday * (1 - alphaCurtain * u_curtain);
             res.lux.push(Lux);
-
-            const s_spk = devBool(dev, 'spkMaster', true) ? 1 : 0;
-            const L_spk = 45 + 35 * (devNum(dev, 'spkVol', 0) / 100);
-            const I_target = Math.pow(10, adv.L_base/10) + inputs.N * Math.pow(10, adv.L_occ_per/10) + s_spk * Math.pow(10, L_spk/10);
-            const next_I_noise = I_noise + (dtSec/adv.tau_noise)*(I_target - I_noise);
-            const L_noise = 10 * Math.log10(Math.max(I_noise, 1e-12));
-            res.noise.push(clamp(L_noise, 0, 120));
-
-            const P_ac_elec = Math.abs(Q_HVAC) / adv.COP;
-            const P_light_eff = adv.P_light_dev * (devNum(dev, 'lightPct', 0) / 100);
-            const P_spk_eff = s_spk * (10 + devNum(dev, 'spkVol', 0) * 0.5);
-            const Power_t = P_ac_elec + P_light_eff + P_spk_eff;
-            res.power.push(Power_t);
+            res.noise.push(clamp(Noise, 0, 120));
+            res.power.push(Math.max(0, Power_t));
             res.energy.push(Energy_total);
+
+            if (i === totalSteps - 1) break;
 
             Energy_total += (Power_t * dtSec) / 3600000;
 
-            P = next_P;
-            C = next_C;
-            Voc = next_Voc;
             T = next_T;
-            RH = next_RH;
-            I_noise = next_I_noise;
+            G = next_G;
+            C = next_C;
+            P = next_P;
+            Voc = next_Voc;
         }
 
         state.lastSimData = res;
@@ -1603,3 +1774,4 @@
 </script>
 </body>
 </html>
+```
