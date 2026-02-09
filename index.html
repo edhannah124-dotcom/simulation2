@@ -435,6 +435,41 @@
             <div><label class="compact-label">室外PM2.5(μg/m³)</label><input type="number" id="outPM" data-key="out_pm" data-status="default" class="compact-input" value="0"></div>
             <div><label class="compact-label">日照照度 Eday(lux)</label><input type="number" id="naturalLight" data-key="eday_lux" data-status="default" class="compact-input" value="0"></div>
           </div>
+ 
+          <!-- 第三部分：天气与建筑 -->
+          <div class="bg-white p-2 rounded border border-slate-200 shadow-sm space-y-2 mt-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-700"><i class="fas fa-cloud-sun mr-1"></i>天气与建筑</span>
+            </div>
+
+            <div class="section-label" style="margin-top:4px;">天气</div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="col-span-2">
+                <label class="compact-label">天气模式</label>
+                <select class="compact-input" id="wx_mode" onchange="updateWeatherParam('mode', this.value)">
+                  <option value="constant">恒定</option>
+                  <option value="diurnal">日变化</option>
+                </select>
+              </div>
+              <div><label class="compact-label">Tout_mean(℃)</label><input type="number" class="compact-input" id="wx_T_mean" onchange="updateWeatherParam('T_mean', this.value)"></div>
+              <div><label class="compact-label">Tout_amp(℃)</label><input type="number" class="compact-input" id="wx_T_amp" onchange="updateWeatherParam('T_amp', this.value)"></div>
+              <div><label class="compact-label">RH_mean(%)</label><input type="number" class="compact-input" id="wx_RH_mean" onchange="updateWeatherParam('RH_mean', this.value)"></div>
+              <div><label class="compact-label">RH_amp(%)</label><input type="number" class="compact-input" id="wx_RH_amp" onchange="updateWeatherParam('RH_amp', this.value)"></div>
+              <div><label class="compact-label">PM_mean(μg/m³)</label><input type="number" class="compact-input" id="wx_PM_mean" onchange="updateWeatherParam('PM_mean', this.value)"></div>
+              <div><label class="compact-label">PM_amp(μg/m³)</label><input type="number" class="compact-input" id="wx_PM_amp" onchange="updateWeatherParam('PM_amp', this.value)"></div>
+              <div><label class="compact-label">Eday_mean(lux)</label><input type="number" class="compact-input" id="wx_E_mean" onchange="updateWeatherParam('E_mean', this.value)"></div>
+              <div><label class="compact-label">Eday_amp(lux)</label><input type="number" class="compact-input" id="wx_E_amp" onchange="updateWeatherParam('E_amp', this.value)"></div>
+            </div>
+
+            <div class="section-label border-t border-slate-100 pt-2">建筑</div>
+            <div class="grid grid-cols-2 gap-2">
+              <div><label class="compact-label">UA (W/K)</label><input type="number" class="compact-input" id="bd_UA" onchange="updateBuildingParam('UA', this.value)"></div>
+              <div><label class="compact-label">层高 H(m)</label><input type="number" class="compact-input" id="bd_H" step="0.1" onchange="updateBuildingParam('H', this.value)"></div>
+              <div><label class="compact-label">渗透 ACH_inf</label><input type="number" class="compact-input" id="bd_ach_inf" step="0.1" onchange="updateBuildingParam('ach_inf', this.value)"></div>
+              <div><label class="compact-label">窗帘遮阳系数 α</label><input type="number" class="compact-input" id="bd_alphaCurtain" step="0.05" min="0" max="1" onchange="updateBuildingParam('alphaCurtain', this.value)"></div>
+            </div>
+            <div class="text-tiny text-slate-400">A_room 会按 A=V/H 自动计算，用于照度公式。</div>
+          </div>
 
           <div class="section-label border-t border-slate-100 pt-2">仿真时长</div>
           <div class="grid grid-cols-2 gap-2 items-end">
@@ -484,47 +519,11 @@
         <div class="control-group flex flex-col gap-4">
           <div class="control-group-title text-emerald-600">
             <span><i class="fas fa-sliders-h mr-1"></i>设备控制</span>
-            <span id="stagedHint" class="mini-badge">编辑区：不触发仿真</span>
           </div>
 
           <div id="deviceControlsContainer" class="space-y-2"></div>
 
-          <!-- 第三部分：天气与建筑 -->
-          <div class="bg-white p-2 rounded border border-slate-200 shadow-sm space-y-2">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-slate-700"><i class="fas fa-cloud-sun mr-1"></i>天气与建筑</span>
-              <span class="text-tiny text-slate-400">更改后会重新仿真</span>
-            </div>
-
-            <div class="section-label" style="margin-top:4px;">天气</div>
-            <div class="grid grid-cols-2 gap-2">
-              <div class="col-span-2">
-                <label class="compact-label">天气模式</label>
-                <select class="compact-input" id="wx_mode" onchange="updateWeatherParam('mode', this.value)">
-                  <option value="constant">恒定</option>
-                  <option value="diurnal">日变化</option>
-                </select>
-              </div>
-              <div><label class="compact-label">Tout_mean(℃)</label><input type="number" class="compact-input" id="wx_T_mean" onchange="updateWeatherParam('T_mean', this.value)"></div>
-              <div><label class="compact-label">Tout_amp(℃)</label><input type="number" class="compact-input" id="wx_T_amp" onchange="updateWeatherParam('T_amp', this.value)"></div>
-              <div><label class="compact-label">RH_mean(%)</label><input type="number" class="compact-input" id="wx_RH_mean" onchange="updateWeatherParam('RH_mean', this.value)"></div>
-              <div><label class="compact-label">RH_amp(%)</label><input type="number" class="compact-input" id="wx_RH_amp" onchange="updateWeatherParam('RH_amp', this.value)"></div>
-              <div><label class="compact-label">PM_mean(μg/m³)</label><input type="number" class="compact-input" id="wx_PM_mean" onchange="updateWeatherParam('PM_mean', this.value)"></div>
-              <div><label class="compact-label">PM_amp(μg/m³)</label><input type="number" class="compact-input" id="wx_PM_amp" onchange="updateWeatherParam('PM_amp', this.value)"></div>
-              <div><label class="compact-label">Eday_mean(lux)</label><input type="number" class="compact-input" id="wx_E_mean" onchange="updateWeatherParam('E_mean', this.value)"></div>
-              <div><label class="compact-label">Eday_amp(lux)</label><input type="number" class="compact-input" id="wx_E_amp" onchange="updateWeatherParam('E_amp', this.value)"></div>
-            </div>
-
-            <div class="section-label border-t border-slate-100 pt-2">建筑</div>
-            <div class="grid grid-cols-2 gap-2">
-              <div><label class="compact-label">UA (W/K)</label><input type="number" class="compact-input" id="bd_UA" onchange="updateBuildingParam('UA', this.value)"></div>
-              <div><label class="compact-label">层高 H(m)</label><input type="number" class="compact-input" id="bd_H" step="0.1" onchange="updateBuildingParam('H', this.value)"></div>
-              <div><label class="compact-label">渗透 ACH_inf</label><input type="number" class="compact-input" id="bd_ach_inf" step="0.1" onchange="updateBuildingParam('ach_inf', this.value)"></div>
-              <div><label class="compact-label">窗帘遮阳系数 α</label><input type="number" class="compact-input" id="bd_alphaCurtain" step="0.05" min="0" max="1" onchange="updateBuildingParam('alphaCurtain', this.value)"></div>
-            </div>
-            <div class="text-tiny text-slate-400">A_room 会按 A=V/H 自动计算，用于照度公式。</div>
-          </div>
-
+         
           <!-- 干预时间（applied） -->
           <div class="bg-white p-2 rounded border border-indigo-100 shadow-sm space-y-2">
             <div class="flex items-center justify-between">
