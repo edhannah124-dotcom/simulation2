@@ -428,12 +428,42 @@
             <div><label class="compact-label">初始 PM2.5(μg/m³)</label><input type="number" id="initPM" data-key="init_pm" data-status="default" class="compact-input" value="0"></div>
           </div>
 
-          <div class="section-label border-t border-slate-100 pt-1">室外参数</div>
-          <div class="grid grid-cols-2 gap-2">
-            <div><label class="compact-label">室外温度 Tout(℃)</label><input type="number" id="outTemp" data-key="out_temp" data-status="default" class="compact-input" value="0"></div>
-            <div><label class="compact-label">室外湿度 RHout(%)</label><input type="number" id="outRH" data-key="out_rh" data-status="default" class="compact-input" value="0"></div>
-            <div><label class="compact-label">室外PM2.5(μg/m³)</label><input type="number" id="outPM" data-key="out_pm" data-status="default" class="compact-input" value="0"></div>
-            <div><label class="compact-label">日照照度 Eday(lux)</label><input type="number" id="naturalLight" data-key="eday_lux" data-status="default" class="compact-input" value="0"></div>
+          <!-- 第三部分：天气与建筑 -->
+          <div class="bg-white p-2 rounded border border-slate-200 shadow-sm space-y-2 mt-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-700"><i class="fas fa-cloud-sun mr-1"></i>天气与建筑</span>
+            </div>
+
+            <div class="section-label" style="margin-top:4px;">天气</div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="col-span-2">
+                <label class="compact-label">天气模式</label>
+                <select class="compact-input" id="wx_mode" onchange="updateWeatherParam('mode', this.value)">
+                  <option value="constant">恒定</option>
+                  <option value="daily">日变化</option>
+                </select>
+              </div>
+              <div><label class="compact-label">Tout_mean(℃)</label><input type="number" class="compact-input" id="wx_T_mean" onchange="updateWeatherParam('T_mean', this.value)"></div>
+              <div><label class="compact-label">Tout_amp(℃)</label><input type="number" class="compact-input" id="wx_T_amp" onchange="updateWeatherParam('T_amp', this.value)"></div>
+              <div><label class="compact-label">RH_mean(%)</label><input type="number" class="compact-input" id="wx_RH_mean" onchange="updateWeatherParam('RH_mean', this.value)"></div>
+              <div><label class="compact-label">RH_amp(%)</label><input type="number" class="compact-input" id="wx_RH_amp" onchange="updateWeatherParam('RH_amp', this.value)"></div>
+              <div><label class="compact-label">PM_mean(μg/m³)</label><input type="number" class="compact-input" id="wx_PM_mean" onchange="updateWeatherParam('PM_mean', this.value)"></div>
+              <div><label class="compact-label">PM_amp(μg/m³)</label><input type="number" class="compact-input" id="wx_PM_amp" onchange="updateWeatherParam('PM_amp', this.value)"></div>
+              <div><label class="compact-label">Eday_mean(lux)</label><input type="number" class="compact-input" id="wx_E_mean" onchange="updateWeatherParam('E_mean', this.value)"></div>
+              <div><label class="compact-label">Eday_amp(lux)</label><input type="number" class="compact-input" id="wx_E_amp" onchange="updateWeatherParam('E_amp', this.value)"></div>
+            </div>
+
+            <div class="section-label border-t border-slate-100 pt-2">建筑</div>
+            <div class="grid grid-cols-2 gap-2">
+              <div><label class="compact-label">UA (W/K)</label><input type="number" class="compact-input" id="bd_UA" onchange="updateBuildingParam('UA', this.value)"></div>
+              <div><label class="compact-label">层高 H(m)</label><input type="number" class="compact-input" id="bd_H" step="0.1" onchange="updateBuildingParam('H', this.value)"></div>
+              <div><label class="compact-label">渗透 ACH_inf</label><input type="number" class="compact-input" id="bd_ach_inf" step="0.1" onchange="updateBuildingParam('ach_inf', this.value)"></div>
+              <div><label class="compact-label">窗帘遮阳系数 α</label><input type="number" class="compact-input" id="bd_alphaCurtain" step="0.05" min="0" max="1" onchange="updateBuildingParam('alphaCurtain', this.value)"></div>
+            </div>
+            <div class="text-tiny text-slate-400">A_room 会按 A=V/H 自动计算，用于照度公式。</div>
+            <button onclick="applyWeatherBuilding()" class="w-full bg-amber-600 hover:bg-amber-500 text-white h-7 rounded text-xs">
+              应用天气/建筑参数
+            </button>
           </div>
 
           <div class="section-label border-t border-slate-100 pt-2">仿真时长</div>
@@ -484,46 +514,9 @@
         <div class="control-group flex flex-col gap-4">
           <div class="control-group-title text-emerald-600">
             <span><i class="fas fa-sliders-h mr-1"></i>设备控制</span>
-            <span id="stagedHint" class="mini-badge">编辑区：不触发仿真</span>
           </div>
 
           <div id="deviceControlsContainer" class="space-y-2"></div>
-
-          <!-- 第三部分：天气与建筑 -->
-          <div class="bg-white p-2 rounded border border-slate-200 shadow-sm space-y-2">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-slate-700"><i class="fas fa-cloud-sun mr-1"></i>天气与建筑</span>
-              <span class="text-tiny text-slate-400">更改后会重新仿真</span>
-            </div>
-
-            <div class="section-label" style="margin-top:4px;">天气</div>
-            <div class="grid grid-cols-2 gap-2">
-              <div class="col-span-2">
-                <label class="compact-label">天气模式</label>
-                <select class="compact-input" id="wx_mode" onchange="updateWeatherParam('mode', this.value)">
-                  <option value="constant">恒定</option>
-                  <option value="diurnal">日变化</option>
-                </select>
-              </div>
-              <div><label class="compact-label">Tout_mean(℃)</label><input type="number" class="compact-input" id="wx_T_mean" onchange="updateWeatherParam('T_mean', this.value)"></div>
-              <div><label class="compact-label">Tout_amp(℃)</label><input type="number" class="compact-input" id="wx_T_amp" onchange="updateWeatherParam('T_amp', this.value)"></div>
-              <div><label class="compact-label">RH_mean(%)</label><input type="number" class="compact-input" id="wx_RH_mean" onchange="updateWeatherParam('RH_mean', this.value)"></div>
-              <div><label class="compact-label">RH_amp(%)</label><input type="number" class="compact-input" id="wx_RH_amp" onchange="updateWeatherParam('RH_amp', this.value)"></div>
-              <div><label class="compact-label">PM_mean(μg/m³)</label><input type="number" class="compact-input" id="wx_PM_mean" onchange="updateWeatherParam('PM_mean', this.value)"></div>
-              <div><label class="compact-label">PM_amp(μg/m³)</label><input type="number" class="compact-input" id="wx_PM_amp" onchange="updateWeatherParam('PM_amp', this.value)"></div>
-              <div><label class="compact-label">Eday_mean(lux)</label><input type="number" class="compact-input" id="wx_E_mean" onchange="updateWeatherParam('E_mean', this.value)"></div>
-              <div><label class="compact-label">Eday_amp(lux)</label><input type="number" class="compact-input" id="wx_E_amp" onchange="updateWeatherParam('E_amp', this.value)"></div>
-            </div>
-
-            <div class="section-label border-t border-slate-100 pt-2">建筑</div>
-            <div class="grid grid-cols-2 gap-2">
-              <div><label class="compact-label">UA (W/K)</label><input type="number" class="compact-input" id="bd_UA" onchange="updateBuildingParam('UA', this.value)"></div>
-              <div><label class="compact-label">层高 H(m)</label><input type="number" class="compact-input" id="bd_H" step="0.1" onchange="updateBuildingParam('H', this.value)"></div>
-              <div><label class="compact-label">渗透 ACH_inf</label><input type="number" class="compact-input" id="bd_ach_inf" step="0.1" onchange="updateBuildingParam('ach_inf', this.value)"></div>
-              <div><label class="compact-label">窗帘遮阳系数 α</label><input type="number" class="compact-input" id="bd_alphaCurtain" step="0.05" min="0" max="1" onchange="updateBuildingParam('alphaCurtain', this.value)"></div>
-            </div>
-            <div class="text-tiny text-slate-400">A_room 会按 A=V/H 自动计算，用于照度公式。</div>
-          </div>
 
           <!-- 干预时间（applied） -->
           <div class="bg-white p-2 rounded border border-indigo-100 shadow-sm space-y-2">
@@ -648,6 +641,8 @@
     sensorMaster: '环境检测器开关', sensorRate: '环境检测采样率'
   };
 
+  function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
+
   /* =========================
      设备 schema（循环渲染）
   ========================= */
@@ -761,6 +756,29 @@
   /* =========================
      状态：staged vs applied
   ========================= */
+  const DEFAULT_WEATHER = {
+    mode: 'daily',
+    T_mean: 32, T_amp: 2.5,
+    RH_mean: 65, RH_amp: 6,
+    PM_mean: 30, PM_amp: 8,
+    E_mean: 1500, E_amp: 400,
+    phase: 0
+  };
+
+  const DEFAULT_BUILDING = {
+    UA: 150,
+    H: 3.2,
+    ach_inf: 0.2,
+    alphaCurtain: 0.9
+  };
+
+  const DEFAULT_DAILY_AMPS = {
+    T_amp: 2.5,
+    RH_amp: 6,
+    PM_amp: 8,
+    E_amp: 400
+  };
+
   const state = {
     selection: { school: '', type: '', room: '' },
     initData: {},
@@ -796,20 +814,10 @@
     },
 
     // 第三部分：天气与建筑
-    weather: {
-      mode: 'constant',
-      T_mean: 32, T_amp: 0,
-      RH_mean: 65, RH_amp: 0,
-      PM_mean: 30, PM_amp: 0,
-      E_mean: 1500, E_amp: 0,
-      phase: 0
-    },
-    building: {
-      UA: 150,
-      H: 3.2,
-      ach_inf: 0.2,
-      alphaCurtain: 0.9
-    },
+    weather: deepClone(DEFAULT_WEATHER),
+    stagedWeather: deepClone(DEFAULT_WEATHER),
+    building: deepClone(DEFAULT_BUILDING),
+    stagedBuilding: deepClone(DEFAULT_BUILDING),
 
     // 每设备参数（按文档“干预量+参数”）
     deviceParams: {
@@ -870,7 +878,6 @@
     const val = parseFloat(el.value);
     return isNaN(val) ? fallback : val;
   }
-  function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
   function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
   function formatNum(n, digits = 1) {
     if (n === null || n === undefined || isNaN(n)) return '-';
@@ -921,8 +928,11 @@
     syncCmdRangeUI();
 
     runSimulation();
-    renderEventLogs();
+    renderStrategyPanel();
     updateStrategySummary();
+    scrollStrategyToBottom();
+    scrollStrategyToBottom();
+    scrollStrategyToBottom();
   }
 
   /* =========================
@@ -993,30 +1003,44 @@
     state.globalParams[key] = v;
     addSysLog(`global ${key}=${v}`);
     runSimulation();
-    renderEventLogs();
+    renderStrategyPanel();
     updateStrategySummary();
   }
 
+  function ensureDailyAmps(target) {
+    if (target.mode !== 'daily') return;
+    Object.keys(DEFAULT_DAILY_AMPS).forEach((key) => {
+      const v = parseFloat(target[key]);
+      if (!isFinite(v) || v === 0) target[key] = DEFAULT_DAILY_AMPS[key];
+    });
+  }
+
   function updateWeatherParam(key, value) {
-    if (key === 'mode') state.weather.mode = value;
-    else {
-      const v = parseFloat(value);
-      if (isNaN(v)) return;
-      state.weather[key] = v;
+    if (key === 'mode') {
+      state.stagedWeather.mode = value;
+      ensureDailyAmps(state.stagedWeather);
+      syncThirdPartUI();
+      return;
     }
-    addSysLog(`weather ${key}=${state.weather[key] ?? value}`);
-    runSimulation();
-    renderEventLogs();
-    updateStrategySummary();
+    const v = parseFloat(value);
+    if (isNaN(v)) return;
+    state.stagedWeather[key] = v;
   }
 
   function updateBuildingParam(key, value) {
     const v = parseFloat(value);
     if (isNaN(v)) return;
-    state.building[key] = v;
-    addSysLog(`building ${key}=${v}`);
+    state.stagedBuilding[key] = v;
+  }
+
+  function applyWeatherBuilding() {
+    state.weather = deepClone(state.stagedWeather);
+    ensureDailyAmps(state.weather);
+    state.building = deepClone(state.stagedBuilding);
+    syncThirdPartUI();
+    addSysLog('weather/building applied');
     runSimulation();
-    renderEventLogs();
+    renderStrategyPanel();
     updateStrategySummary();
   }
 
@@ -1027,7 +1051,7 @@
     state.deviceParams[group][key] = v;
     addSysLog(`deviceParam ${group}.${key}=${v}`);
     runSimulation();
-    renderEventLogs();
+    renderStrategyPanel();
     updateStrategySummary();
   }
 
@@ -1183,12 +1207,19 @@
 
     const mockInit = {
       people: people, volume: 200,
-      out_temp: 32, out_rh: 65,
       init_temp: init_temp, init_rh: init_rh,
       init_co2: 450 + randRange(0, 100),
-      init_pm: P0_indoor, out_pm: Pout,
-      eday_lux: 1500 + randRange(0, 500)
+      init_pm: P0_indoor
     };
+
+    const pulledWeather = {
+      ...state.stagedWeather,
+      T_mean: 32,
+      RH_mean: 65,
+      PM_mean: Pout,
+      E_mean: 1500 + randRange(0, 500)
+    };
+    ensureDailyAmps(pulledWeather);
 
     for (let k in mockInit) {
       const el = document.querySelector(`input[data-key="${k}"]`);
@@ -1200,10 +1231,8 @@
     setInputStatus('pulled');
 
     // 同步天气初值（mean 取拉取数据）
-    state.weather.T_mean = mockInit.out_temp;
-    state.weather.RH_mean = mockInit.out_rh;
-    state.weather.PM_mean = mockInit.out_pm;
-    state.weather.E_mean = mockInit.eday_lux;
+    state.stagedWeather = deepClone(pulledWeather);
+    state.weather = deepClone(pulledWeather);
 
     // 固定基线（外时段使用）
     state.baselineControls = deepClone(state.stagedControls);
@@ -1216,7 +1245,7 @@
 
     runSimulation();
     logInitialProblem();
-    renderEventLogs();
+    renderStrategyPanel();
     updateStrategySummary();
 
     addSysLog(`初始化数据加载成功: ${school}-${type}-${room}`);
@@ -1244,6 +1273,10 @@
     state.baselineControls = null;
     state.interventions = [];
     state.problemText = null;
+    state.stagedWeather = deepClone(DEFAULT_WEATHER);
+    state.weather = deepClone(DEFAULT_WEATHER);
+    state.stagedBuilding = deepClone(DEFAULT_BUILDING);
+    state.building = deepClone(DEFAULT_BUILDING);
 
     logState.compliance = { temp: null, rh: null, air: null, light: null };
 
@@ -1251,7 +1284,7 @@
     syncThirdPartUI();
 
     runSimulation();
-    renderEventLogs();
+    renderStrategyPanel();
     updateStrategySummary();
 
     addSysLog("系统重置完成");
@@ -1262,21 +1295,21 @@
   ========================= */
   function syncThirdPartUI() {
     // 天气
-    document.getElementById('wx_mode').value = state.weather.mode;
-    document.getElementById('wx_T_mean').value = state.weather.T_mean;
-    document.getElementById('wx_T_amp').value = state.weather.T_amp;
-    document.getElementById('wx_RH_mean').value = state.weather.RH_mean;
-    document.getElementById('wx_RH_amp').value = state.weather.RH_amp;
-    document.getElementById('wx_PM_mean').value = state.weather.PM_mean;
-    document.getElementById('wx_PM_amp').value = state.weather.PM_amp;
-    document.getElementById('wx_E_mean').value = state.weather.E_mean;
-    document.getElementById('wx_E_amp').value = state.weather.E_amp;
+    document.getElementById('wx_mode').value = state.stagedWeather.mode;
+    document.getElementById('wx_T_mean').value = state.stagedWeather.T_mean;
+    document.getElementById('wx_T_amp').value = state.stagedWeather.T_amp;
+    document.getElementById('wx_RH_mean').value = state.stagedWeather.RH_mean;
+    document.getElementById('wx_RH_amp').value = state.stagedWeather.RH_amp;
+    document.getElementById('wx_PM_mean').value = state.stagedWeather.PM_mean;
+    document.getElementById('wx_PM_amp').value = state.stagedWeather.PM_amp;
+    document.getElementById('wx_E_mean').value = state.stagedWeather.E_mean;
+    document.getElementById('wx_E_amp').value = state.stagedWeather.E_amp;
 
     // 建筑
-    document.getElementById('bd_UA').value = state.building.UA;
-    document.getElementById('bd_H').value = state.building.H;
-    document.getElementById('bd_ach_inf').value = state.building.ach_inf;
-    document.getElementById('bd_alphaCurtain').value = state.building.alphaCurtain;
+    document.getElementById('bd_UA').value = state.stagedBuilding.UA;
+    document.getElementById('bd_H').value = state.stagedBuilding.H;
+    document.getElementById('bd_ach_inf').value = state.stagedBuilding.ach_inf;
+    document.getElementById('bd_alphaCurtain').value = state.stagedBuilding.alphaCurtain;
 
     // 全局参数（可编辑项）
     document.getElementById('gp_Qocc_per').value = state.globalParams.Qocc_per;
@@ -1333,8 +1366,9 @@
     state.interventions.push({ startMin, endMin, controls: snapshot, createdAt: Date.now() });
 
     runSimulation();
-    renderEventLogs();
+    renderStrategyPanel();
     updateStrategySummary();
+    scrollStrategyToBottom();
 
     addSysLog(`已应用干预：${startMin}–${endMin}min`);
   }
@@ -1343,14 +1377,14 @@
     if (index < 0 || index >= state.interventions.length) return;
     state.interventions.splice(index, 1);
     runSimulation();
-    renderEventLogs();
+    renderStrategyPanel();
     updateStrategySummary();
   }
 
   function clearInterventions() {
     state.interventions = [];
     runSimulation();
-    renderEventLogs();
+    renderStrategyPanel();
     updateStrategySummary();
   }
 
@@ -1485,40 +1519,37 @@
     return `解决问题：${resolved.length > 0 ? resolved.join('、') : '无'}`;
   }
 
-  function renderEventLogs() {
+  function renderStrategyPanel() {
     const container = document.getElementById('eventLogSection');
     container.innerHTML = '';
-
-    const hasPulled = !!(state.selection && state.selection.school && state.selection.type && state.selection.room);
-    if (!hasPulled) {
-      const div = document.createElement('div');
-      div.className = "text-tiny text-slate-500";
-      div.innerText = "暂无日志。请先拉取数据。";
-      container.appendChild(div);
-      return;
-    }
 
     const problem = state.problemText ? state.problemText : "暂无问题";
     const problemDiv = document.createElement('div');
     const problemOk = (problem === "暂无问题");
-    problemDiv.className = `p-2 rounded border ${problemOk ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-red-50 text-red-800 border-red-200'} log-entry-new`;
     const comp0 = getComplianceInfo(0);
-    problemDiv.innerText = `发现问题：${problem}。解决问题：无。${comp0}`;
+    problemDiv.className = `p-2 rounded border ${problemOk ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-red-50 text-red-800 border-red-200'} log-entry-new`;
+    problemDiv.innerHTML = `
+      <div class="font-semibold mb-1">发现问题：${problem}</div>
+      <div class="text-tiny text-slate-500">解决问题：无</div>
+      <div class="text-tiny text-slate-500">${comp0}</div>
+    `;
     container.appendChild(problemDiv);
 
     for (let i = 0; i < state.interventions.length; i++) {
       const ev = state.interventions[i];
+      const endIdx = clamp((ev.endMin ?? 0) - 1, 0, (state.lastSimData?.t?.length ?? 1) - 1);
+      const resText = getResolvedInfo(ev.startMin, endIdx);
+      const compText = getComplianceInfo(endIdx);
       const div = document.createElement('div');
       div.className = "p-2 rounded border bg-white border-indigo-200 text-slate-800 log-entry-new";
-
-      const baseText = `策略${i+1}：${ev.startMin}–${ev.endMin}min ${summarizeControlsForStrategy(ev.controls)}`;
-      const resText = getResolvedInfo(ev.startMin, ev.endMin);
-      const compText = getComplianceInfo(ev.endMin);
-      const fullText = `${baseText}。${resText}。${compText}`;
-
       div.innerHTML = `
         <div class="flex items-start justify-between gap-2">
-          <div class="flex-1 leading-relaxed">${fullText}</div>
+          <div class="flex-1 space-y-1">
+            <div class="font-semibold">策略${i+1}：${ev.startMin}–${ev.endMin}min</div>
+            <div class="text-tiny text-slate-600">${summarizeControlsForStrategy(ev.controls)}</div>
+            <div class="text-tiny text-slate-500">${resText}</div>
+            <div class="text-tiny text-slate-500">${compText}</div>
+          </div>
           <button class="text-xs text-red-600 hover:text-red-500 shrink-0"
                   title="删除该策略"
                   onclick="deleteIntervention(${i})">
@@ -1528,6 +1559,12 @@
       `;
       container.appendChild(div);
     }
+  }
+
+  function scrollStrategyToBottom() {
+    const container = document.getElementById('logContainer');
+    if (!container) return;
+    container.scrollTop = container.scrollHeight;
   }
 
   function evaluate(data) {
@@ -1629,25 +1666,20 @@
     const wx = state.weather;
     const mode = wx.mode;
 
-    const baseTout = safeNum('outTemp', wx.T_mean);
-    const baseRH = safeNum('outRH', wx.RH_mean);
-    const basePM = safeNum('outPM', wx.PM_mean);
-    const baseE = safeNum('naturalLight', wx.E_mean);
-
-    if (mode === 'diurnal') {
+    if (mode === 'daily') {
       return {
-        Tout: diurnalValue(wx.T_mean ?? baseTout, wx.T_amp ?? 0, minute, totalMinutes, wx.phase ?? 0),
-        RHout: clamp(diurnalValue(wx.RH_mean ?? baseRH, wx.RH_amp ?? 0, minute, totalMinutes, (wx.phase ?? 0) + 1.2), 0, 100),
-        Pout: Math.max(0, diurnalValue(wx.PM_mean ?? basePM, wx.PM_amp ?? 0, minute, totalMinutes, (wx.phase ?? 0) + 2.1)),
-        Eday: Math.max(0, diurnalValue(wx.E_mean ?? baseE, wx.E_amp ?? 0, minute, totalMinutes, (wx.phase ?? 0) - 1.0))
+        Tout: diurnalValue(wx.T_mean ?? 0, wx.T_amp ?? 0, minute, totalMinutes, wx.phase ?? 0),
+        RHout: clamp(diurnalValue(wx.RH_mean ?? 0, wx.RH_amp ?? 0, minute, totalMinutes, (wx.phase ?? 0) + 1.2), 0, 100),
+        Pout: Math.max(0, diurnalValue(wx.PM_mean ?? 0, wx.PM_amp ?? 0, minute, totalMinutes, (wx.phase ?? 0) + 2.1)),
+        Eday: Math.max(0, diurnalValue(wx.E_mean ?? 0, wx.E_amp ?? 0, minute, totalMinutes, (wx.phase ?? 0) - 1.0))
       };
     }
     // constant
     return {
-      Tout: wx.T_mean ?? baseTout,
-      RHout: clamp(wx.RH_mean ?? baseRH, 0, 100),
-      Pout: Math.max(0, wx.PM_mean ?? basePM),
-      Eday: Math.max(0, wx.E_mean ?? baseE)
+      Tout: wx.T_mean ?? 0,
+      RHout: clamp(wx.RH_mean ?? 0, 0, 100),
+      Pout: Math.max(0, wx.PM_mean ?? 0),
+      Eday: Math.max(0, wx.E_mean ?? 0)
     };
   }
 
@@ -2081,13 +2113,17 @@
   window.onload = () => {
     renderDeviceControls();
     initCharts();
+    state.stagedWeather.mode = 'daily';
+    state.weather.mode = 'daily';
+    ensureDailyAmps(state.stagedWeather);
+    ensureDailyAmps(state.weather);
     syncSimDurationUI();
     syncCmdRangeUI();
     syncThirdPartUI();
 
     // 初始仿真：用 staged 作为基线（未拉取时）
     runSimulation();
-    renderEventLogs();
+    renderStrategyPanel();
     updateStrategySummary();
 
     // 初始 label 同步
