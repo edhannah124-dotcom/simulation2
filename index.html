@@ -370,8 +370,11 @@
       <button onclick="resetToDefault()" class="bg-slate-700 hover:bg-slate-600 text-xs px-3 py-1.5 rounded transition border border-slate-600">
         <i class="fas fa-undo mr-1"></i>重置
       </button>
-      <button onclick="exportStrategy()" class="bg-emerald-600 hover:bg-emerald-500 text-xs px-3 py-1.5 rounded transition shadow-sm border border-emerald-500">
-        <i class="fas fa-save mr-1"></i>导出策略
+      <button onclick="exportLogsCSV()" class="bg-emerald-600 hover:bg-emerald-500 text-xs px-3 py-1.5 rounded transition shadow-sm border border-emerald-500">
+        <i class="fas fa-file-csv mr-1"></i>导出CSV
+      </button>
+      <button onclick="exportLogsJSON()" class="bg-emerald-700 hover:bg-emerald-600 text-xs px-3 py-1.5 rounded transition shadow-sm border border-emerald-600">
+        <i class="fas fa-file-code mr-1"></i>导出JSON
       </button>
     </div>
   </header>
@@ -391,17 +394,16 @@
           <option>珠海科技学院</option>
         </select>
         <select id="typeSelect" class="compact-input h-7 py-0 text-xs col-span-1">
-          <option value="">教室类型...</option>
-          <option>图书馆</option>
-          <option>体育馆</option>
-          <option>智慧教室</option>
+          <option value="">楼宇...</option>
+          <option>A楼</option>
+          <option>B楼</option>
+          <option>C楼</option>
+          <option>D楼</option>
         </select>
         <select id="roomSelect" class="compact-input h-7 py-0 text-xs col-span-1">
-          <option value="">编号...</option>
-          <option>101教室</option>
-          <option>201教室</option>
-          <option>301教室</option>
-          <option>401教室</option>
+          <option value="">教室...</option>
+          <option>101</option><option>102</option><option>103</option><option>104</option><option>105</option>
+          <option>106</option><option>107</option><option>108</option><option>109</option><option>110</option>
         </select>
       </div>
       <button onclick="pullClassroomData()" class="w-full bg-blue-600 hover:bg-blue-500 text-white h-7 rounded text-xs mt-1">
@@ -418,53 +420,39 @@
             <span><i class="fas fa-cube mr-1"></i>初始化数据</span>
           </div>
 
-          <div class="section-label">室内参数</div>
+          <div class="section-label">主初始化项</div>
           <div class="grid grid-cols-2 gap-2 mb-2">
-            <div><label class="compact-label">人数</label><input type="number" id="initPeople" data-key="people" data-status="default" class="compact-input" value="0"></div>
-            <div><label class="compact-label">教室体积(m³)</label><input type="number" id="roomVol" data-key="volume" data-status="default" class="compact-input" value="0"></div>
-            <div><label class="compact-label">初始温度 T0(℃)</label><input type="number" id="initTemp" data-key="init_temp" data-status="default" class="compact-input" value="0"></div>
-            <div><label class="compact-label">初始湿度 RH0(%)</label><input type="number" id="initRH" data-key="init_rh" data-status="default" class="compact-input" value="0"></div>
-            <div><label class="compact-label">初始 CO2(ppm)</label><input type="number" id="initCO2" data-key="init_co2" data-status="default" class="compact-input" value="0"></div>
-            <div><label class="compact-label">初始 PM2.5(μg/m³)</label><input type="number" id="initPM" data-key="init_pm" data-status="default" class="compact-input" value="0"></div>
+            <div>
+              <label class="compact-label">天气</label>
+              <select id="initWeatherType" class="compact-input" onchange="updateInitField('weatherType', this.value)">
+                <option value="阴">阴</option>
+                <option value="多云">多云</option>
+                <option value="晴">晴</option>
+              </select>
+            </div>
+            <div><label class="compact-label">获取时间</label><input type="text" id="initFetchTime" class="compact-input" readonly></div>
+            <div><label class="compact-label">灯具数量</label><input type="number" id="initLampCount" class="compact-input" min="1" onchange="updateInitField('lampCount', this.value)"></div>
+            <div><label class="compact-label">光通量(lm)</label><input type="number" id="initLumens" class="compact-input" min="100" onchange="updateInitField('luminousFlux', this.value)"></div>
+            <div><label class="compact-label">地面面积A(m²)</label><input type="number" id="initArea" class="compact-input" min="20" step="0.1" onchange="updateInitField('area', this.value)"></div>
+            <div>
+              <label class="compact-label">季节</label>
+              <select id="initSeason" class="compact-input" onchange="updateInitField('season', this.value)">
+                <option value="春">春</option><option value="夏">夏</option><option value="秋">秋</option><option value="冬">冬</option>
+              </select>
+            </div>
+            <div><label class="compact-label">人数</label><input type="number" id="initPeople" data-key="people" data-status="default" class="compact-input" value="0" onchange="updateInitField('people', this.value)"></div>
+            <div><label class="compact-label">教室高度H(m)</label><input type="number" id="initHeight" class="compact-input" min="2" step="0.1" onchange="updateInitField('height', this.value)"></div>
+            <div class="col-span-2"><label class="compact-label">体积V=A×H (m³)</label><input type="number" id="roomVol" data-key="volume" data-status="default" class="compact-input" value="0" readonly></div>
           </div>
 
-          <!-- 第三部分：天气与建筑 -->
-          <div class="bg-white p-2 rounded border border-slate-200 shadow-sm space-y-2 mt-2">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-slate-700"><i class="fas fa-cloud-sun mr-1"></i>天气与建筑</span>
+          <details class="mt-2">
+            <summary>模型初值（兼容）</summary>
+            <div class="adv-grid">
+              <div><label class="compact-label">初始温度 T0(℃)</label><input type="number" id="initTemp" data-key="init_temp" data-status="default" class="compact-input" value="26"></div>
+              <div><label class="compact-label">初始湿度 RH0(%)</label><input type="number" id="initRH" data-key="init_rh" data-status="default" class="compact-input" value="55"></div>
+              <div class="col-span-2"><label class="compact-label">初始 CO2(ppm)</label><input type="number" id="initCO2" data-key="init_co2" data-status="default" class="compact-input" value="500"></div>
             </div>
-
-            <div class="section-label" style="margin-top:4px;">天气</div>
-            <div class="grid grid-cols-2 gap-2">
-              <div class="col-span-2">
-                <label class="compact-label">天气模式</label>
-                <select class="compact-input" id="wx_mode" onchange="updateWeatherParam('mode', this.value)">
-                  <option value="constant">恒定</option>
-                  <option value="daily">日变化</option>
-                </select>
-              </div>
-              <div><label class="compact-label">Tout_mean(℃)</label><input type="number" class="compact-input" id="wx_T_mean" onchange="updateWeatherParam('T_mean', this.value)"></div>
-              <div><label class="compact-label">Tout_amp(℃)</label><input type="number" class="compact-input" id="wx_T_amp" onchange="updateWeatherParam('T_amp', this.value)"></div>
-              <div><label class="compact-label">RH_mean(%)</label><input type="number" class="compact-input" id="wx_RH_mean" onchange="updateWeatherParam('RH_mean', this.value)"></div>
-              <div><label class="compact-label">RH_amp(%)</label><input type="number" class="compact-input" id="wx_RH_amp" onchange="updateWeatherParam('RH_amp', this.value)"></div>
-              <div><label class="compact-label">PM_mean(μg/m³)</label><input type="number" class="compact-input" id="wx_PM_mean" onchange="updateWeatherParam('PM_mean', this.value)"></div>
-              <div><label class="compact-label">PM_amp(μg/m³)</label><input type="number" class="compact-input" id="wx_PM_amp" onchange="updateWeatherParam('PM_amp', this.value)"></div>
-              <div><label class="compact-label">Eday_mean(lux)</label><input type="number" class="compact-input" id="wx_E_mean" onchange="updateWeatherParam('E_mean', this.value)"></div>
-              <div><label class="compact-label">Eday_amp(lux)</label><input type="number" class="compact-input" id="wx_E_amp" onchange="updateWeatherParam('E_amp', this.value)"></div>
-            </div>
-
-            <div class="section-label border-t border-slate-100 pt-2">建筑</div>
-            <div class="grid grid-cols-2 gap-2">
-              <div><label class="compact-label">UA (W/K)</label><input type="number" class="compact-input" id="bd_UA" onchange="updateBuildingParam('UA', this.value)"></div>
-              <div><label class="compact-label">层高 H(m)</label><input type="number" class="compact-input" id="bd_H" step="0.1" onchange="updateBuildingParam('H', this.value)"></div>
-              <div><label class="compact-label">渗透 ACH_inf</label><input type="number" class="compact-input" id="bd_ach_inf" step="0.1" onchange="updateBuildingParam('ach_inf', this.value)"></div>
-              <div><label class="compact-label">窗帘遮阳系数 α</label><input type="number" class="compact-input" id="bd_alphaCurtain" step="0.05" min="0" max="1" onchange="updateBuildingParam('alphaCurtain', this.value)"></div>
-            </div>
-            <div class="text-tiny text-slate-400">A_room 会按 A=V/H 自动计算，用于照度公式。</div>
-            <button onclick="applyWeatherBuilding()" class="w-full bg-amber-600 hover:bg-amber-500 text-white h-7 rounded text-xs">
-              应用天气/建筑参数
-            </button>
-          </div>
+          </details>
 
           <div class="section-label border-t border-slate-100 pt-2">仿真时长</div>
           <div class="grid grid-cols-2 gap-2 items-end">
@@ -484,28 +472,39 @@
             当前仿真总时长：<span id="simTotalLabel" class="font-mono text-slate-600">45m</span>
           </div>
 
-          <!-- 全局高级参数：保留给跨设备/校准类 -->
           <details>
-            <summary>全局高级参数</summary>
+            <summary>高级参数（四模型）</summary>
             <div class="adv-grid">
-              <div><label class="compact-label">ρ (kg/m³)</label><input class="compact-input" id="gp_rho" value="1.2" readonly></div>
-              <div><label class="compact-label">cp (J/kg·K)</label><input class="compact-input" id="gp_cp" value="1005" readonly></div>
-              <div class="col-span-2"><label class="compact-label">Patm (Pa)</label><input class="compact-input" id="gp_Patm" value="101325" readonly></div>
-
-              <div><label class="compact-label">Qocc_per (W/人)</label><input type="number" class="compact-input" id="gp_Qocc_per" onchange="updateGlobalParam('Qocc_per', this.value)"></div>
-              <div><label class="compact-label">eco2 (m³/s/人)</label><input type="number" class="compact-input" id="gp_eco2" onchange="updateGlobalParam('eco2', this.value)"></div>
-
-              <div><label class="compact-label">Epm (μg/s)</label><input type="number" class="compact-input" id="gp_Epm" onchange="updateGlobalParam('Epm', this.value)"></div>
-              <div><label class="compact-label">kdep (1/s)</label><input type="number" class="compact-input" id="gp_kdep" onchange="updateGlobalParam('kdep', this.value)"></div>
-
-              <div><label class="compact-label">Evoc (mg/s)</label><input type="number" class="compact-input" id="gp_Evoc" onchange="updateGlobalParam('Evoc', this.value)"></div>
-              <div><label class="compact-label">kvoc (1/s)</label><input type="number" class="compact-input" id="gp_kvoc" onchange="updateGlobalParam('kvoc', this.value)"></div>
-
-              <div><label class="compact-label">L_base (dB)</label><input type="number" class="compact-input" id="gp_L_base" onchange="updateGlobalParam('L_base', this.value)"></div>
-              <div><label class="compact-label">L_occ_per (dB)</label><input type="number" class="compact-input" id="gp_L_occ_per" onchange="updateGlobalParam('L_occ_per', this.value)"></div>
-
-              <div><label class="compact-label">τ_noise (s)</label><input type="number" class="compact-input" id="gp_tau_noise" onchange="updateGlobalParam('tau_noise', this.value)"></div>
-              <div><label class="compact-label">Cout (ppm)</label><input type="number" class="compact-input" id="gp_Cout" onchange="updateGlobalParam('Cout', this.value)"></div>
+              <div class="col-span-2 text-tiny text-slate-500">光照模型</div>
+              <div><label class="compact-label">eta</label><input type="number" class="compact-input" id="mp_light_eta" step="0.01" onchange="updateModelParam('light','eta', this.value)"></div>
+              <div><label class="compact-label">epsilonSun</label><input type="number" class="compact-input" id="mp_light_epsilonSun" step="0.1" onchange="updateModelParam('light','epsilonSun', this.value)"></div>
+              <div><label class="compact-label">E_bg</label><input type="number" class="compact-input" id="mp_light_E_bg" step="0.1" onchange="updateModelParam('light','E_bg', this.value)"></div>
+              <div><label class="compact-label">tau_tw</label><input type="number" class="compact-input" id="mp_light_tau_tw" step="1" onchange="updateModelParam('light','tau_tw', this.value)"></div>
+              <div class="col-span-2 text-tiny text-slate-500 border-t border-slate-100 pt-1">温度模型</div>
+              <div><label class="compact-label">dt</label><input type="number" class="compact-input" id="mp_temp_dt" step="1" onchange="updateModelParam('temp','dt', this.value)"></div>
+              <div><label class="compact-label">s_occ</label><input type="number" class="compact-input" id="mp_temp_s_occ" step="0.01" onchange="updateModelParam('temp','s_occ', this.value)"></div>
+              <div><label class="compact-label">k_occ</label><input type="number" class="compact-input" id="mp_temp_k_occ" step="0.000001" onchange="updateModelParam('temp','k_occ', this.value)"></div>
+              <div><label class="compact-label">tau_occ</label><input type="number" class="compact-input" id="mp_temp_tau_occ" step="1" onchange="updateModelParam('temp','tau_occ', this.value)"></div>
+              <div><label class="compact-label">k_ac</label><input type="number" class="compact-input" id="mp_temp_k_ac" step="0.000001" onchange="updateModelParam('temp','k_ac', this.value)"></div>
+              <div><label class="compact-label">tau_ac</label><input type="number" class="compact-input" id="mp_temp_tau_ac" step="1" onchange="updateModelParam('temp','tau_ac', this.value)"></div>
+              <div><label class="compact-label">deltaT_heat_ss</label><input type="number" class="compact-input" id="mp_temp_deltaT_heat_ss" step="0.01" onchange="updateModelParam('temp','deltaT_heat_ss', this.value)"></div>
+              <div><label class="compact-label">k_heat</label><input type="number" class="compact-input" id="mp_temp_k_heat" step="0.000001" onchange="updateModelParam('temp','k_heat', this.value)"></div>
+              <div class="col-span-2 text-tiny text-slate-500 border-t border-slate-100 pt-1">湿度模型</div>
+              <div><label class="compact-label">dt</label><input type="number" class="compact-input" id="mp_humidity_dt" step="1" onchange="updateModelParam('humidity','dt', this.value)"></div>
+              <div><label class="compact-label">alpha</label><input type="number" class="compact-input" id="mp_humidity_alpha" step="0.0000000001" onchange="updateModelParam('humidity','alpha', this.value)"></div>
+              <div><label class="compact-label">beta</label><input type="number" class="compact-input" id="mp_humidity_beta" step="0.0000001" onchange="updateModelParam('humidity','beta', this.value)"></div>
+              <div><label class="compact-label">tau_w</label><input type="number" class="compact-input" id="mp_humidity_tau_w" step="1" onchange="updateModelParam('humidity','tau_w', this.value)"></div>
+              <div><label class="compact-label">s_occ_w</label><input type="number" class="compact-input" id="mp_humidity_s_occ_w" step="0.01" onchange="updateModelParam('humidity','s_occ_w', this.value)"></div>
+              <div><label class="compact-label">s_dehum</label><input type="number" class="compact-input" id="mp_humidity_s_dehum" step="0.01" onchange="updateModelParam('humidity','s_dehum', this.value)"></div>
+              <div class="col-span-2 text-tiny text-slate-500 border-t border-slate-100 pt-1">CO2模型</div>
+              <div><label class="compact-label">dt</label><input type="number" class="compact-input" id="mp_co2_dt" step="1" onchange="updateModelParam('co2','dt', this.value)"></div>
+              <div><label class="compact-label">C_out</label><input type="number" class="compact-input" id="mp_co2_C_out" step="1" onchange="updateModelParam('co2','C_out', this.value)"></div>
+              <div><label class="compact-label">q_person</label><input type="number" class="compact-input" id="mp_co2_q_person" step="0.0000001" onchange="updateModelParam('co2','q_person', this.value)"></div>
+              <div><label class="compact-label">ACH</label><input type="number" class="compact-input" id="mp_co2_ACH" step="0.01" onchange="updateModelParam('co2','ACH', this.value)"></div>
+              <div><label class="compact-label">Q_ref</label><input type="number" class="compact-input" id="mp_co2_Q_ref" step="0.001" onchange="updateModelParam('co2','Q_ref', this.value)"></div>
+              <div><label class="compact-label">s_occ_co2</label><input type="number" class="compact-input" id="mp_co2_s_occ_co2" step="0.01" onchange="updateModelParam('co2','s_occ_co2', this.value)"></div>
+              <div><label class="compact-label">s_vent</label><input type="number" class="compact-input" id="mp_co2_s_vent" step="0.01" onchange="updateModelParam('co2','s_vent', this.value)"></div>
+              <div><label class="compact-label">w_base(t)</label><input type="text" class="compact-input" id="mp_co2_w_base" value="profile:default" onchange="updateModelParam('co2','w_base', this.value)"></div>
             </div>
           </details>
         </div>
@@ -552,34 +551,45 @@
 
       <div class="chart-card">
         <div class="card-header">
-          <span class="card-title"><i class="fas fa-thermometer-half text-red-500"></i> 热湿环境变化 (T&RH)</span>
+          <span class="card-title"><i class="fas fa-sun text-amber-500"></i> 光照（Lux）</span>
+          <span id="badge-lux" class="status-badge bg-slate-100 text-slate-500">等待</span>
+        </div>
+        <div class="card-body">
+          <canvas id="chartLux"></canvas>
+          <div class="absolute top-2 right-2 text-tiny text-slate-400 pointer-events-none bg-white/80 px-1 rounded">目标区间: 300~500 lux</div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="card-header">
+          <span class="card-title"><i class="fas fa-thermometer-half text-red-500"></i> 温度（℃）</span>
           <span id="badge-temp" class="status-badge bg-slate-100 text-slate-500">等待</span>
         </div>
         <div class="card-body">
-          <canvas id="chartTempHum"></canvas>
-          <div class="absolute top-2 right-2 text-tiny text-slate-400 pointer-events-none bg-white/80 px-1 rounded">适宜区间: 20~26°C | RH 30~70%</div>
+          <canvas id="chartTemp"></canvas>
+          <div class="absolute top-2 right-2 text-tiny text-slate-400 pointer-events-none bg-white/80 px-1 rounded">季节阈值: 冬16~24 / 夏24~28</div>
         </div>
       </div>
 
       <div class="chart-card">
         <div class="card-header">
-          <span class="card-title"><i class="fas fa-wind text-emerald-500"></i> 空气质量演化 (AQI)</span>
-          <span id="badge-air" class="status-badge bg-slate-100 text-slate-500">等待</span>
+          <span class="card-title"><i class="fas fa-tint text-blue-500"></i> 湿度（RH%）</span>
+          <span id="badge-rh" class="status-badge bg-slate-100 text-slate-500">等待</span>
         </div>
         <div class="card-body">
-          <canvas id="chartAir"></canvas>
-          <div class="absolute top-2 right-2 text-tiny text-slate-400 pointer-events-none bg-white/80 px-1 rounded">CO2&lt;1000ppm | PM2.5&lt;35</div>
+          <canvas id="chartRh"></canvas>
+          <div class="absolute top-2 right-2 text-tiny text-slate-400 pointer-events-none bg-white/80 px-1 rounded">目标区间: 30~60%</div>
         </div>
       </div>
 
       <div class="chart-card">
         <div class="card-header">
-          <span class="card-title"><i class="fas fa-bolt text-yellow-500"></i> 声光环境及功率</span>
-          <span id="badge-light" class="status-badge bg-slate-100 text-slate-500">等待</span>
+          <span class="card-title"><i class="fas fa-smog text-emerald-500"></i> CO2（ppm）</span>
+          <span id="badge-co2" class="status-badge bg-slate-100 text-slate-500">等待</span>
         </div>
         <div class="card-body">
-          <canvas id="chartPower"></canvas>
-          <div class="absolute top-2 right-2 text-tiny text-slate-400 pointer-events-none bg-white/80 px-1 rounded">Lux&gt;300 | Noise&lt;50</div>
+          <canvas id="chartCo2"></canvas>
+          <div class="absolute top-2 right-2 text-tiny text-slate-400 pointer-events-none bg-white/80 px-1 rounded">阈值: ≤1000 ppm</div>
         </div>
       </div>
 
@@ -622,12 +632,10 @@
      阈值与显示名
   ========================= */
   const THRESHOLDS = {
-    temp: { min: 20, max: 26 },
-    rh: { min: 30, max: 70 },
+    temp: { winter: { min: 16, max: 24 }, summer: { min: 24, max: 28 } },
+    rh: { min: 30, max: 60 },
     co2: { max: 1000 },
-    pm25: { max: 35 },
-    lux: { min: 300 },
-    noise: { max: 50 }
+    lux: { min: 300, max: 500 }
   };
 
   const logState = { compliance: { temp: null, rh: null, air: null, light: null } };
@@ -648,107 +656,24 @@
   ========================= */
   const DEVICE_SCHEMA = [
     {
-      id: 'ac',
-      title: '空调',
-      headerToggle: { key: 'acMaster' },
-      controls: [
-        { type: 'range', key: 'acTemp', label: '目标温度', min: 16, max: 30, step: 0.5, unit: '℃', labelId: 'label_acTemp', format: (v)=>Number(v).toFixed(1) + '℃', defaultValue: 25.5 },
-        { type: 'btn', key: 'acFan', label: '风速', options: ['LOW','MID','HIGH'], defaultValue: 'MID' },
-        { type: 'toggleRow', key: 'acDehum', label: '除湿模式', defaultValue: false }
-      ],
-      params: [
-        { group: 'hvac', key: 'K', label: 'K (W/℃)', type: 'number', step: 1 },
-        { group: 'hvac', key: 'Qmax', label: 'Qmax (W)', type: 'number', step: 10 },
-        { group: 'hvac', key: 'COP', label: 'COP', type: 'number', step: 0.1 },
-        { group: 'hvac', key: 'P_acFan_LOW', label: 'P_fan LOW (W)', type: 'number', step: 1 },
-        { group: 'hvac', key: 'P_acFan_MID', label: 'P_fan MID (W)', type: 'number', step: 1 },
-        { group: 'hvac', key: 'P_acFan_HIGH', label: 'P_fan HIGH (W)', type: 'number', step: 1 },
-        { group: 'hvac', key: 'Ddehum', label: '除湿强度 D(0~1)', type: 'number', step: 0.05, min: 0, max: 1 },
-        { group: 'hvac', key: 'RH_dehum_target', label: '除湿目标RH(%)', type: 'number', step: 1, min: 20, max: 70 }
-      ]
-    },
-    {
-      id: 'vent',
-      title: '通风/窗',
+      id: 'core_env',
+      title: '核心环境控制',
       headerToggle: null,
       controls: [
-        { type: 'btn', key: 'ventFan', label: '通风档位', options: ['OFF','LOW','MID','HIGH'], defaultValue: 'MID' },
-        { type: 'range', key: 'winRatio', label: '开窗比例', min: 0, max: 100, step: 1, unit: '%', labelId: 'label_winRatio', format: (v)=>String(v)+'%', defaultValue: 0 }
+        { type: 'range', key: 'curtain', bind: 'core', label: '窗帘', min: 0, max: 100, step: 1, unit: '%', labelId: 'label_curtain', format: (v)=>String(v)+'%', defaultValue: 0 },
+        { type: 'range', key: 'lightPct', bind: 'core', label: '灯', min: 0, max: 100, step: 1, unit: '%', labelId: 'label_lightPct', format: (v)=>String(v)+'%', defaultValue: 0 },
+        { type: 'toggleRow', key: 'coolOn', bind: 'core', label: '空调制冷', defaultValue: true },
+        { type: 'toggleRow', key: 'heatOn', bind: 'core', label: '空调制热', defaultValue: false },
+        { type: 'range', key: 'tempSet', bind: 'core', label: '设定温度', min: 16, max: 30, step: 0.5, unit: '℃', labelId: 'label_tempSet', format: (v)=>Number(v).toFixed(1) + '℃', defaultValue: 25.5 },
+        { type: 'toggleRow', key: 'dehumOn', bind: 'core', label: '除湿', defaultValue: false },
+        { type: 'btn', key: 'ventLevel', bind: 'core', label: '通风', options: ['OFF','LOW','MID','HIGH'], defaultValue: 'MID' }
       ],
       params: [
         { group: 'vent', key: 'ach_LOW', label: 'ACH LOW', type: 'number', step: 0.1 },
         { group: 'vent', key: 'ach_MID', label: 'ACH MID', type: 'number', step: 0.1 },
         { group: 'vent', key: 'ach_HIGH', label: 'ACH HIGH', type: 'number', step: 0.1 },
-        { group: 'vent', key: 'ach_win_max', label: '开窗ACH_max', type: 'number', step: 0.1 },
+        { group: 'vent', key: 'ach_win_max', label: 'ACH 窗户最大', type: 'number', step: 0.1 },
         { group: 'vent', key: 'eta_vent', label: '过滤效率 η', type: 'number', step: 0.05, min: 0, max: 1 }
-      ]
-    },
-    {
-      id: 'light',
-      title: '光照与窗帘',
-      headerToggle: null,
-      controls: [
-        { type: 'range', key: 'lightPct', label: '灯光亮度', min: 0, max: 100, step: 1, unit: '%', labelId: 'label_lightPct', format: (v)=>String(v)+'%', defaultValue: 0 },
-        { type: 'range', key: 'curtain', label: '窗帘开启率', min: 0, max: 100, step: 1, unit: '%', labelId: 'label_curtain', format: (v)=>String(v)+'%', defaultValue: 0 }
-      ],
-      params: [
-        { group: 'light', key: 'N', label: '灯数量 N', type: 'number', step: 1, min: 1 },
-        { group: 'light', key: 'Phi', label: '单灯光通量 Φ(lm)', type: 'number', step: 10, min: 100 },
-        { group: 'light', key: 'CU', label: '利用系数 CU', type: 'number', step: 0.05, min: 0, max: 1 },
-        { group: 'light', key: 'K', label: '维护系数 K', type: 'number', step: 0.05, min: 0, max: 1 },
-        { group: 'light', key: 'P_light_max', label: '最大电功率 Pmax(W)', type: 'number', step: 1, min: 1 },
-        { group: 'light', key: 'eta_heat_light', label: '转热比例 η_heat', type: 'number', step: 0.05, min: 0, max: 1 }
-      ]
-    },
-    {
-      id: 'spk',
-      title: '音箱',
-      headerToggle: { key: 'spkMaster' },
-      controls: [
-        { type: 'range', key: 'spkVol', label: '音量', min: 0, max: 100, step: 1, unit: '', labelId: 'label_spkVol', format: (v)=>String(v), defaultValue: 0 }
-      ],
-      params: [
-        { group: 'audio', key: 'P_spk_max', label: '音箱最大功率(W)', type: 'number', step: 1, min: 1 },
-        { group: 'audio', key: 'L_spk_base', label: '音箱底噪(dB)', type: 'number', step: 1 },
-        { group: 'audio', key: 'L_spk_gain', label: '音箱增益(dB@100%)', type: 'number', step: 1 }
-      ]
-    },
-    {
-      id: 'mic',
-      title: '话筒',
-      headerToggle: { key: 'micMaster' },
-      controls: [
-        { type: 'range', key: 'micGain', label: '增益', min: 0, max: 100, step: 1, unit: '%', labelId: 'label_micGain', format: (v)=>String(v)+'%', defaultValue: 50 }
-      ],
-      params: [
-        { group: 'mic', key: 'P_mic_dev', label: '话筒功率(W@100%)', type: 'number', step: 1, min: 0 },
-        { group: 'mic', key: 'L_mic', label: '话筒声学增益(dB)', type: 'number', step: 1 }
-      ]
-    },
-    {
-      id: 'cam',
-      title: '摄像机',
-      headerToggle: { key: 'camMaster' },
-      controls: [
-        { type: 'btn', key: 'camMode', label: '模式', options: ['LOW','MID','HIGH'], defaultValue: 'MID' },
-        { type: 'note', text: '模式影响摄像机功率与热增益' }
-      ],
-      params: [
-        { group: 'cam', key: 'P_cam_dev', label: '摄像机功率(W@MID)', type: 'number', step: 1, min: 0 },
-        { group: 'cam', key: 'cam_LOW_factor', label: 'LOW系数', type: 'number', step: 0.05, min: 0.1 },
-        { group: 'cam', key: 'cam_HIGH_factor', label: 'HIGH系数', type: 'number', step: 0.05, min: 0.1 }
-      ]
-    },
-    {
-      id: 'sensor',
-      title: '环境检测器',
-      headerToggle: { key: 'sensorMaster' },
-      controls: [
-        { type: 'range', key: 'sensorRate', label: '采样频率', min: 1, max: 60, step: 1, unit: '/min', labelId: 'label_sensorRate', format: (v)=>String(v)+'/min', defaultValue: 30 }
-      ],
-      params: [
-        { group: 'sensor', key: 'P_sensor_dev', label: '检测器功率(W@60/min)', type: 'number', step: 1, min: 0 },
-        { group: 'sensor', key: 'sensor_idle_factor', label: '低频功率系数', type: 'number', step: 0.05, min: 0, max: 1 }
       ]
     }
   ];
@@ -780,8 +705,22 @@
   };
 
   const state = {
-    selection: { school: '', type: '', room: '' },
-    initData: {},
+    selection: { school: '', building: '', room: '' },
+    // initData：左侧主初始化字段；people/height/volume/lampCount/luminousFlux 已参与当前逻辑，其余字段先用于展示与后续扩展
+    initData: {
+      weatherType: '阴',
+      fetchTime: '',
+      lampCount: 10,
+      luminousFlux: 1500,
+      area: 62.5,
+      season: '夏',
+      people: 40,
+      height: 3.2,
+      volume: 200,
+      init_temp: 26,
+      init_rh: 55,
+      init_co2: 500
+    },
     simTotalMinutes: 45,
 
     // staged：界面编辑用，不触发仿真
@@ -803,6 +742,8 @@
 
     // applied：字段级策略列表（changes 仅保存核心字段）
     interventions: [],
+    // 第四轮：结构化策略日志（右下主数据源 + 导出源）
+    eventLogs: [],
 
     // 全局（跨设备/校准）参数
     globalParams: {
@@ -814,6 +755,14 @@
       L_base: 40, L_occ_per: 25,
       tau_noise: 30,
       Cout: 450
+    },
+
+    // modelParams：第二轮仅完成结构与编辑入口；当前仅少量兼容映射（如 co2.C_out->globalParams.Cout），其余为第三轮公式预留
+    modelParams: {
+      light: { eta: 0.6, epsilonSun: 30, E_bg: 5, tau_tw: 30 },
+      temp: { dt: 60, s_occ: 1.09, k_occ: 1.175e-05, tau_occ: 1522, k_ac: 2.282e-04, tau_ac: 4382, deltaT_heat_ss: 3.06, k_heat: 2.013e-03 },
+      humidity: { dt: 60, alpha: 1.105e-09, beta: 2.953e-07, tau_w: 7200, s_occ_w: 1.0, s_dehum: 1.0 },
+      co2: { dt: 60, C_out: 442, q_person: 1.784e-07, ACH: 1.19, Q_ref: 0.176, s_occ_co2: 3.582, s_vent: 1.0, w_base: 'profile:default' }
     },
 
     // 第三部分：天气与建筑
@@ -889,6 +838,7 @@
   function addSysLog(msg) { console.log(msg); }
 
   const CORE_VENT_LEVELS = ['OFF', 'LOW', 'MID', 'HIGH'];
+  const CORE_CONTROL_FIELDS = ['curtain', 'lightPct', 'coolOn', 'heatOn', 'tempSet', 'dehumOn', 'ventLevel'];
   function normalizeVentLevel(val) {
     const v = String(val || 'OFF').toUpperCase();
     return CORE_VENT_LEVELS.includes(v) ? v : 'OFF';
@@ -918,6 +868,26 @@
     return normalizeControlsToCoreShape({ ...(base || {}), ...(patch || {}) });
   }
 
+  function normalizeCoreChanges(raw = {}) {
+    const normalized = {};
+    if (Object.prototype.hasOwnProperty.call(raw, 'curtain')) normalized.curtain = clamp(parseFloat(raw.curtain ?? 0), 0, 100);
+    if (Object.prototype.hasOwnProperty.call(raw, 'lightPct')) normalized.lightPct = clamp(parseFloat(raw.lightPct ?? 0), 0, 100);
+    if (Object.prototype.hasOwnProperty.call(raw, 'coolOn')) normalized.coolOn = !!raw.coolOn;
+    if (Object.prototype.hasOwnProperty.call(raw, 'heatOn')) normalized.heatOn = !!raw.heatOn;
+    if (Object.prototype.hasOwnProperty.call(raw, 'tempSet')) normalized.tempSet = clamp(parseFloat(raw.tempSet ?? 25.5), 16, 32);
+    if (Object.prototype.hasOwnProperty.call(raw, 'dehumOn')) normalized.dehumOn = !!raw.dehumOn;
+    if (Object.prototype.hasOwnProperty.call(raw, 'ventLevel')) normalized.ventLevel = normalizeVentLevel(raw.ventLevel);
+    return normalized;
+  }
+
+  function pickChangedCoreFields(baseCore, draftCore) {
+    const changes = {};
+    CORE_CONTROL_FIELDS.forEach((field) => {
+      if (baseCore[field] !== draftCore[field]) changes[field] = draftCore[field];
+    });
+    return changes;
+  }
+
   function sanitizeInterventionRange(startInput, endInput, totalMinutes) {
     let startMin = parseInt(startInput ?? '0', 10);
     let endMin = (endInput === '' || endInput === null || endInput === undefined)
@@ -931,6 +901,7 @@
   }
 
   function mapCoreToLegacyControls(core, fallback = {}) {
+    // 旧字段映射统一由该函数负责，保证 runSimulation 输入结构稳定
     const legacy = deepClone(fallback || {});
     legacy.curtain = core.curtain;
     legacy.lightPct = core.lightPct;
@@ -939,6 +910,12 @@
     legacy.acFan = normalizeVentLevel(legacy.acFan || 'MID');
     legacy.acDehum = !!core.dehumOn;
     legacy.ventFan = core.ventLevel;
+    // 同时保留核心字段，供新公式直接读取
+    legacy.coolOn = !!core.coolOn;
+    legacy.heatOn = !!core.heatOn;
+    legacy.tempSet = core.tempSet;
+    legacy.dehumOn = !!core.dehumOn;
+    legacy.ventLevel = core.ventLevel;
     return legacy;
   }
 
@@ -1015,10 +992,33 @@
     syncBtnGroupsActive();
   }
 
+  function stageCoreSetValue(key, value) {
+    if (!state.stagedInterventionControls) syncStagedInterventionControls();
+    const patch = {};
+    patch[key] = (key === 'curtain' || key === 'lightPct' || key === 'tempSet') ? parseFloat(value) : value;
+    state.stagedInterventionControls = mergeCoreControls(state.stagedInterventionControls, patch);
+    syncControlLabel(key, state.stagedInterventionControls[key]);
+    syncBtnGroupsActive();
+  }
+
+  function stageCoreToggle(key, checked) {
+    if (!state.stagedInterventionControls) syncStagedInterventionControls();
+    const patch = {};
+    patch[key] = !!checked;
+    state.stagedInterventionControls = mergeCoreControls(state.stagedInterventionControls, patch);
+  }
+
+  function stageCoreBtn(key, val) {
+    if (!state.stagedInterventionControls) syncStagedInterventionControls();
+    const patch = {};
+    patch[key] = val;
+    state.stagedInterventionControls = mergeCoreControls(state.stagedInterventionControls, patch);
+    syncBtnGroupsActive();
+  }
+
   function syncControlLabel(key, value) {
     const map = {
-      acTemp: 'label_acTemp',
-      winRatio: 'label_winRatio',
+      tempSet: 'label_tempSet',
       curtain: 'label_curtain',
       lightPct: 'label_lightPct',
       spkVol: 'label_spkVol',
@@ -1030,7 +1030,7 @@
     const el = document.getElementById(id);
     if (!el) return;
 
-    if (key === 'acTemp') el.innerText = Number(value).toFixed(1) + '℃';
+    if (key === 'tempSet') el.innerText = Number(value).toFixed(1) + '℃';
     else if (key === 'sensorRate') el.innerText = String(value) + '/min';
     else if (key === 'micGain') el.innerText = String(value) + '%';
     else if (key === 'winRatio' || key === 'curtain' || key === 'lightPct') el.innerText = String(value) + '%';
@@ -1045,7 +1045,9 @@
         const groupId = `group_${ctrl.key}`;
         const container = document.getElementById(groupId);
         if (!container) return;
-        const current = state.stagedControls[ctrl.key];
+        const current = (ctrl.bind === 'core')
+          ? getCurrentCoreControlDraft()[ctrl.key]
+          : state.stagedControls[ctrl.key];
         Array.from(container.children).forEach(btn => {
           const val = btn.getAttribute('data-val');
           if (val === String(current)) btn.classList.add('active');
@@ -1066,6 +1068,60 @@
     runSimulation();
     renderStrategyPanel();
     updateStrategySummary();
+  }
+
+  function recalcRoomVolume() {
+    const area = parseFloat(state.initData.area ?? 0);
+    const height = parseFloat(state.initData.height ?? 0);
+    const volume = Math.max(0, area * height);
+    state.initData.volume = volume;
+    const volEl = document.getElementById('roomVol');
+    if (volEl) volEl.value = volume.toFixed(1);
+  }
+
+  function updateInitField(key, value) {
+    const numericKeys = ['lampCount', 'luminousFlux', 'area', 'people', 'height'];
+    if (numericKeys.includes(key)) {
+      const parsed = parseFloat(value);
+      if (!isFinite(parsed)) return;
+      state.initData[key] = parsed;
+    } else {
+      state.initData[key] = value;
+    }
+    if (key === 'lampCount' && isFinite(state.initData.lampCount)) state.deviceParams.light.N = Math.max(1, state.initData.lampCount);
+    if (key === 'luminousFlux' && isFinite(state.initData.luminousFlux)) state.deviceParams.light.Phi = Math.max(100, state.initData.luminousFlux);
+    if (key === 'height' && isFinite(state.initData.height)) {
+      state.building.H = state.initData.height;
+      state.stagedBuilding.H = state.initData.height;
+    }
+    if (key === 'area' || key === 'height') recalcRoomVolume();
+    runSimulation();
+    renderStrategyPanel();
+    updateStrategySummary();
+  }
+
+  function updateModelParam(group, key, value) {
+    const parsed = parseFloat(value);
+    if (!state.modelParams[group]) return;
+    state.modelParams[group][key] = isNaN(parsed) ? value : parsed;
+    // 保持与旧参数最小兼容映射，避免当前公式调用中断
+    if (group === 'co2' && key === 'C_out' && isFinite(parsed)) state.globalParams.Cout = parsed;
+    if (group === 'vent' && key === 'ACH_LOW' && isFinite(parsed)) state.deviceParams.vent.ach_LOW = parsed;
+    runSimulation();
+    renderStrategyPanel();
+    updateStrategySummary();
+  }
+
+  function syncModelParamsUI() {
+    const mp = state.modelParams;
+    const setVal = (id, value) => { const el = document.getElementById(id); if (el) el.value = value; };
+    setVal('mp_light_eta', mp.light.eta); setVal('mp_light_epsilonSun', mp.light.epsilonSun); setVal('mp_light_E_bg', mp.light.E_bg); setVal('mp_light_tau_tw', mp.light.tau_tw);
+    setVal('mp_temp_dt', mp.temp.dt); setVal('mp_temp_s_occ', mp.temp.s_occ); setVal('mp_temp_k_occ', mp.temp.k_occ); setVal('mp_temp_tau_occ', mp.temp.tau_occ);
+    setVal('mp_temp_k_ac', mp.temp.k_ac); setVal('mp_temp_tau_ac', mp.temp.tau_ac); setVal('mp_temp_deltaT_heat_ss', mp.temp.deltaT_heat_ss); setVal('mp_temp_k_heat', mp.temp.k_heat);
+    setVal('mp_humidity_dt', mp.humidity.dt); setVal('mp_humidity_alpha', mp.humidity.alpha); setVal('mp_humidity_beta', mp.humidity.beta); setVal('mp_humidity_tau_w', mp.humidity.tau_w);
+    setVal('mp_humidity_s_occ_w', mp.humidity.s_occ_w); setVal('mp_humidity_s_dehum', mp.humidity.s_dehum);
+    setVal('mp_co2_dt', mp.co2.dt); setVal('mp_co2_C_out', mp.co2.C_out); setVal('mp_co2_q_person', mp.co2.q_person); setVal('mp_co2_ACH', mp.co2.ACH);
+    setVal('mp_co2_Q_ref', mp.co2.Q_ref); setVal('mp_co2_s_occ_co2', mp.co2.s_occ_co2); setVal('mp_co2_s_vent', mp.co2.s_vent); setVal('mp_co2_w_base', mp.co2.w_base);
   }
 
   function ensureDailyAmps(target) {
@@ -1144,12 +1200,16 @@
       `;
 
       const body = card.querySelector(`#body_${dev.id}`);
+      const coreDraft = getCurrentCoreControlDraft();
 
       dev.controls.forEach(ctrl => {
         if (ctrl.type === 'range') {
-          const v = state.stagedControls[ctrl.key];
+          const v = (ctrl.bind === 'core') ? coreDraft[ctrl.key] : state.stagedControls[ctrl.key];
           const labelText = ctrl.format ? ctrl.format(v) : String(v);
           const block = document.createElement('div');
+          const inputHandlers = (ctrl.bind === 'core')
+            ? `oninput="stageCoreSetValue('${ctrl.key}', this.value)" onchange="stageCoreSetValue('${ctrl.key}', this.value)"`
+            : `oninput="stageSetValue('${ctrl.key}', this.value)" onchange="stageSetValue('${ctrl.key}', this.value)"`;
           block.innerHTML = `
             <div class="flex justify-between text-tiny text-slate-400">
               <span>${ctrl.label}</span>
@@ -1158,8 +1218,7 @@
             <input type="range"
               id="${ctrl.key}"
               min="${ctrl.min}" max="${ctrl.max}" step="${ctrl.step}" value="${v}"
-              oninput="stageSetValue('${ctrl.key}', this.value)"
-              onchange="stageSetValue('${ctrl.key}', this.value)"
+              ${inputHandlers}
             >
           `;
           body.appendChild(block);
@@ -1172,18 +1231,21 @@
             btn.className = 'btn-group-item';
             btn.setAttribute('data-val', opt);
             btn.innerText = opt;
-            btn.onclick = () => stageBtn(ctrl.key, opt);
+            btn.onclick = () => (ctrl.bind === 'core' ? stageCoreBtn(ctrl.key, opt) : stageBtn(ctrl.key, opt));
             group.appendChild(btn);
           });
           body.appendChild(group);
         } else if (ctrl.type === 'toggleRow') {
-          const v = !!state.stagedControls[ctrl.key];
+          const v = (ctrl.bind === 'core') ? !!coreDraft[ctrl.key] : !!state.stagedControls[ctrl.key];
+          const onChange = (ctrl.bind === 'core')
+            ? `stageCoreToggle('${ctrl.key}', this.checked)`
+            : `stageToggle('${ctrl.key}', this.checked)`;
           const row = document.createElement('div');
           row.className = "flex justify-between items-center pt-1 border-t border-dashed border-slate-100";
           row.innerHTML = `
             <span class="text-tiny text-slate-500">${ctrl.label}</span>
             <label class="toggle-switch" style="width:24px; height:14px;">
-              <input type="checkbox" id="${ctrl.key}" ${v ? 'checked' : ''} onchange="stageToggle('${ctrl.key}', this.checked)">
+              <input type="checkbox" id="${ctrl.key}" ${v ? 'checked' : ''} onchange="${onChange}">
               <span class="slider"></span>
             </label>
           `;
@@ -1230,8 +1292,9 @@
     });
 
     // 初始同步 label 与 btn active
+    const coreDraftNow = getCurrentCoreControlDraft();
     DEVICE_SCHEMA.forEach(d => d.controls.forEach(c => {
-      if (c.type === 'range') syncControlLabel(c.key, state.stagedControls[c.key]);
+      if (c.type === 'range') syncControlLabel(c.key, c.bind === 'core' ? coreDraftNow[c.key] : state.stagedControls[c.key]);
     }));
     syncBtnGroupsActive();
   }
@@ -1256,12 +1319,12 @@
 
   function pullClassroomData() {
     const school = document.getElementById('schoolSelect').value;
-    const type = document.getElementById('typeSelect').value;
+    const building = document.getElementById('typeSelect').value;
     const room = document.getElementById('roomSelect').value;
 
-    if (!school || !type || !room) return alert("请完整选择学校、类型和教室编号");
+    if (!school || !building || !room) return alert("请完整选择学校、楼宇和教室");
 
-    seed(school + type + room);
+    seed(school + building + room);
 
     const people = Math.floor(randRange(30, 60));
     const init_temp = randRange(26, 30);
@@ -1273,12 +1336,26 @@
     state.indoor.pm25_init = P0_indoor;
     state.outdoor.pm25_out = Pout;
 
+    const area = randRange(55, 75);
+    const height = randRange(3.0, 3.8);
+    const lampCount = Math.floor(randRange(8, 16));
+    const luminousFlux = Math.floor(randRange(1200, 2200));
+    const seasons = ['春', '夏', '秋', '冬'];
+    const weatherKinds = ['阴', '多云', '晴'];
     const mockInit = {
+      weatherType: weatherKinds[Math.floor(randRange(0, weatherKinds.length))],
+      fetchTime: new Date().toLocaleString('zh-CN', { hour12: false }),
+      lampCount,
+      luminousFlux,
+      area: Number(area.toFixed(1)),
+      season: seasons[Math.floor(randRange(0, seasons.length))],
       people: people, volume: 200,
+      height: Number(height.toFixed(1)),
       init_temp: init_temp, init_rh: init_rh,
       init_co2: 450 + randRange(0, 100),
       init_pm: P0_indoor
     };
+    mockInit.volume = Number((mockInit.area * mockInit.height).toFixed(1));
 
     const pulledWeather = {
       ...state.stagedWeather,
@@ -1289,13 +1366,26 @@
     };
     ensureDailyAmps(pulledWeather);
 
-    for (let k in mockInit) {
-      const el = document.querySelector(`input[data-key="${k}"]`);
-      if (el) el.value = Number(mockInit[k]).toFixed(0);
-    }
+    const setEl = (id, value) => { const el = document.getElementById(id); if (el) el.value = value; };
+    setEl('initWeatherType', mockInit.weatherType);
+    setEl('initFetchTime', mockInit.fetchTime);
+    setEl('initLampCount', mockInit.lampCount);
+    setEl('initLumens', mockInit.luminousFlux);
+    setEl('initArea', mockInit.area);
+    setEl('initSeason', mockInit.season);
+    setEl('initPeople', Math.round(mockInit.people));
+    setEl('initHeight', mockInit.height);
+    setEl('roomVol', mockInit.volume);
+    setEl('initTemp', Number(mockInit.init_temp).toFixed(1));
+    setEl('initRH', Number(mockInit.init_rh).toFixed(1));
+    setEl('initCO2', Number(mockInit.init_co2).toFixed(0));
 
-    state.selection = { school, type, room };
+    state.selection = { school, building, room };
     state.initData = mockInit;
+    state.deviceParams.light.N = mockInit.lampCount;
+    state.deviceParams.light.Phi = mockInit.luminousFlux;
+    state.building.H = mockInit.height;
+    state.stagedBuilding.H = mockInit.height;
     setInputStatus('pulled');
 
     // 同步天气初值（mean 取拉取数据）
@@ -1308,6 +1398,7 @@
 
     // 清空策略
     state.interventions = [];
+    state.eventLogs = [];
     state.problemText = null;
 
     syncThirdPartUI();
@@ -1317,7 +1408,7 @@
     renderStrategyPanel();
     updateStrategySummary();
 
-    addSysLog(`初始化数据加载成功: ${school}-${type}-${room}`);
+    addSysLog(`初始化数据加载成功: ${school}-${building}-${room}`);
   }
 
   /* =========================
@@ -1342,7 +1433,13 @@
     state.baselineControls = null;
     state.stagedInterventionControls = getCurrentCoreControlDraft();
     state.interventions = [];
+    state.eventLogs = [];
     state.problemText = null;
+    state.selection = { school: '', building: '', room: '' };
+    state.initData = {
+      weatherType: '阴', fetchTime: '', lampCount: 10, luminousFlux: 1500, area: 62.5, season: '夏',
+      people: 40, height: 3.2, volume: 200, init_temp: 26, init_rh: 55, init_co2: 500
+    };
     state.stagedWeather = deepClone(DEFAULT_WEATHER);
     state.weather = deepClone(DEFAULT_WEATHER);
     state.stagedBuilding = deepClone(DEFAULT_BUILDING);
@@ -1364,48 +1461,44 @@
      第三部分 UI 同步
   ========================= */
   function syncThirdPartUI() {
-    // 天气
-    document.getElementById('wx_mode').value = state.stagedWeather.mode;
-    document.getElementById('wx_T_mean').value = state.stagedWeather.T_mean;
-    document.getElementById('wx_T_amp').value = state.stagedWeather.T_amp;
-    document.getElementById('wx_RH_mean').value = state.stagedWeather.RH_mean;
-    document.getElementById('wx_RH_amp').value = state.stagedWeather.RH_amp;
-    document.getElementById('wx_PM_mean').value = state.stagedWeather.PM_mean;
-    document.getElementById('wx_PM_amp').value = state.stagedWeather.PM_amp;
-    document.getElementById('wx_E_mean').value = state.stagedWeather.E_mean;
-    document.getElementById('wx_E_amp').value = state.stagedWeather.E_amp;
-
-    // 建筑
-    document.getElementById('bd_UA').value = state.stagedBuilding.UA;
-    document.getElementById('bd_H').value = state.stagedBuilding.H;
-    document.getElementById('bd_ach_inf').value = state.stagedBuilding.ach_inf;
-    document.getElementById('bd_alphaCurtain').value = state.stagedBuilding.alphaCurtain;
-
-    // 全局参数（可编辑项）
-    document.getElementById('gp_Qocc_per').value = state.globalParams.Qocc_per;
-    document.getElementById('gp_eco2').value = state.globalParams.eco2;
-    document.getElementById('gp_Epm').value = state.globalParams.Epm;
-    document.getElementById('gp_kdep').value = state.globalParams.kdep;
-    document.getElementById('gp_Evoc').value = state.globalParams.Evoc;
-    document.getElementById('gp_kvoc').value = state.globalParams.kvoc;
-    document.getElementById('gp_L_base').value = state.globalParams.L_base;
-    document.getElementById('gp_L_occ_per').value = state.globalParams.L_occ_per;
-    document.getElementById('gp_tau_noise').value = state.globalParams.tau_noise;
-    document.getElementById('gp_Cout').value = state.globalParams.Cout;
+    const setVal = (id, value) => { const el = document.getElementById(id); if (el) el.value = value; };
+    setVal('initWeatherType', state.initData.weatherType || '阴');
+    setVal('initFetchTime', state.initData.fetchTime || '');
+    setVal('initLampCount', state.initData.lampCount ?? 10);
+    setVal('initLumens', state.initData.luminousFlux ?? 1500);
+    setVal('initArea', state.initData.area ?? 62.5);
+    setVal('initSeason', state.initData.season || '夏');
+    setVal('initPeople', state.initData.people ?? 40);
+    setVal('initHeight', state.initData.height ?? 3.2);
+    setVal('roomVol', state.initData.volume ?? 200);
+    setVal('initTemp', state.initData.init_temp ?? 26);
+    setVal('initRH', state.initData.init_rh ?? 55);
+    setVal('initCO2', state.initData.init_co2 ?? 500);
+    syncModelParamsUI();
   }
 
   /* =========================
      applied：策略应用与读取
   ========================= */
   function getActiveInterventionsAtMinute(minute) {
+    return state.interventions
+      .map((ev, idx) => ({ ev, idx }))
+      .filter(item => minute >= item.ev.startMin && minute < item.ev.endMin);
     return state.interventions.filter(ev => minute >= ev.startMin && minute < ev.endMin);
+
   }
 
   // 字段冲突统一在此处理：同字段“后添加优先”
   function resolveFieldConflicts(activeInterventions) {
     const resolved = {};
+    activeInterventions
+      .sort((a, b) => (a.idx - b.idx) || ((a.ev.createdAt ?? 0) - (b.ev.createdAt ?? 0)))
+      .forEach(({ ev }) => {
+      const rawChanges = ev && ev.changes ? ev.changes : normalizeControlsToCoreShape(ev?.controls || {});
+      const changes = normalizeCoreChanges(rawChanges);
     activeInterventions.forEach(ev => {
       const changes = normalizeControlsToCoreShape(ev.changes || {});
+
       Object.keys(changes).forEach((field) => {
         resolved[field] = changes[field];
       });
@@ -1423,6 +1516,12 @@
   }
 
   function getActiveControlsAtMinute(minute) {
+    // 核心控制对象（core）先算出，再映射为旧字段对象对接旧逻辑
+    const core = buildEffectiveCoreControls(minute);
+    const legacyBase = state.baselineControls
+      ? mapCoreToLegacyControls(normalizeControlsToCoreShape(state.baselineControls), state.stagedControls)
+      : deepClone(state.stagedControls);
+    return mapCoreToLegacyControls(core, legacyBase);
     const core = buildEffectiveCoreControls(minute);
     // 兼容旧版 runSimulation：返回值继续带旧字段
     return mapCoreToLegacyControls(core, state.stagedControls);
@@ -1446,6 +1545,14 @@
     }
 
     syncStagedInterventionControls();
+
+    const draftCore = getCurrentCoreControlDraft();
+    const baseCore = normalizeControlsToCoreShape(state.baselineControls);
+    const changes = pickChangedCoreFields(baseCore, draftCore);
+    if (Object.keys(changes).length === 0) {
+      alert("当前核心环境字段与基线一致，无需新增干预。");
+      return;
+    }
     const changes = getCurrentCoreControlDraft();
     state.interventions.push({
       id: `iv_${Date.now()}_${state.interventions.length + 1}`,
@@ -1457,7 +1564,27 @@
       source: 'manual'
     });
 
+    const addedIntervention = state.interventions[state.interventions.length - 1];
+    addedIntervention.conflictResolution = buildConflictResolution(addedIntervention);
+
+    const before = getMetricsSnapshotByMinute(range.startMin);
     runSimulation();
+    const after = getMetricsSnapshotByMinute(Math.max(range.startMin, range.endMin - 1));
+    appendEventLog({
+      type: 'add',
+      interventionId: addedIntervention.id,
+      startMin: range.startMin,
+      endMin: range.endMin,
+      changes,
+      beforeMetrics: before?.metrics || null,
+      afterMetrics: after?.metrics || null,
+      complianceBefore: formatCompliance(before?.compliance),
+      complianceAfter: formatCompliance(after?.compliance),
+      issuesBefore: before?.issues || [],
+      issuesAfter: after?.issues || [],
+      conflictResolution: addedIntervention.conflictResolution || [],
+      createdAt: Date.now()
+    });
     renderStrategyPanel();
     updateStrategySummary();
     scrollStrategyToBottom();
@@ -1467,15 +1594,52 @@
 
   function deleteIntervention(index) {
     if (index < 0 || index >= state.interventions.length) return;
+    const ev = state.interventions[index];
+    const before = getMetricsSnapshotByMinute(Math.max(ev.startMin, (ev.endMin ?? 1) - 1));
     state.interventions.splice(index, 1);
     runSimulation();
+    const after = getMetricsSnapshotByMinute(Math.max(ev.startMin, (ev.endMin ?? 1) - 1));
+    appendEventLog({
+      type: 'delete',
+      interventionId: ev.id,
+      startMin: ev.startMin,
+      endMin: ev.endMin,
+      changes: ev.changes || {},
+      beforeMetrics: before?.metrics || null,
+      afterMetrics: after?.metrics || null,
+      complianceBefore: formatCompliance(before?.compliance),
+      complianceAfter: formatCompliance(after?.compliance),
+      issuesBefore: before?.issues || [],
+      issuesAfter: after?.issues || [],
+      conflictResolution: ev.conflictResolution || [],
+      createdAt: Date.now()
+    });
     renderStrategyPanel();
     updateStrategySummary();
   }
 
   function clearInterventions() {
+    const toDelete = deepClone(state.interventions);
     state.interventions = [];
     runSimulation();
+    toDelete.forEach((ev) => {
+      const after = getMetricsSnapshotByMinute(Math.max(ev.startMin, (ev.endMin ?? 1) - 1));
+      appendEventLog({
+        type: 'delete',
+        interventionId: ev.id,
+        startMin: ev.startMin,
+        endMin: ev.endMin,
+        changes: ev.changes || {},
+        beforeMetrics: null,
+        afterMetrics: after?.metrics || null,
+        complianceBefore: '-/4',
+        complianceAfter: formatCompliance(after?.compliance),
+        issuesBefore: [],
+        issuesAfter: after?.issues || [],
+        conflictResolution: ev.conflictResolution || [],
+        createdAt: Date.now()
+      });
+    });
     renderStrategyPanel();
     updateStrategySummary();
   }
@@ -1485,27 +1649,114 @@
   ========================= */
   function computeIssuesFromMetrics(m) {
     const issues = [];
-    if (m.T > THRESHOLDS.temp.max) issues.push("室温过高");
-    if (m.T < THRESHOLDS.temp.min) issues.push("室温过低");
+    const season = (state.initData?.season === '冬') ? 'winter' : 'summer';
+    const tempRange = THRESHOLDS.temp[season];
+    if (m.T > tempRange.max) issues.push("室温过高");
+    if (m.T < tempRange.min) issues.push("室温过低");
     if (m.RH > THRESHOLDS.rh.max) issues.push("湿度过高");
     if (m.RH < THRESHOLDS.rh.min) issues.push("湿度过低");
     if (m.CO2 > THRESHOLDS.co2.max) issues.push("CO2超标");
-    if (m.PM > THRESHOLDS.pm25.max) issues.push("PM2.5超标");
     if (m.Lux < THRESHOLDS.lux.min) issues.push("光照不足");
-    if (m.Noise > THRESHOLDS.noise.max) issues.push("噪声过大");
+    if (m.Lux > THRESHOLDS.lux.max) issues.push("光照过强");
     return issues;
   }
 
   function getMetricsAtIndex(data, idx) {
-    const clampIdx = clamp(idx, 0, data.t.length - 1);
+    const tempSeries = data.temp || data.t || [];
+    const clampIdx = clamp(idx, 0, tempSeries.length - 1);
     return {
-      T: data.t[clampIdx],
+      T: tempSeries[clampIdx],
       RH: data.rh[clampIdx],
       CO2: data.co2[clampIdx],
-      PM: data.pm[clampIdx],
-      Lux: data.lux[clampIdx],
-      Noise: data.noise[clampIdx]
+      Lux: data.lux[clampIdx]
     };
+  }
+
+  function getComplianceFromMetrics(m) {
+    const season = (state.initData?.season === '冬') ? 'winter' : 'summer';
+    const tempRange = THRESHOLDS.temp[season];
+    const map = {
+      temp: (m.T >= tempRange.min && m.T <= tempRange.max),
+      rh: (m.RH >= THRESHOLDS.rh.min && m.RH <= THRESHOLDS.rh.max),
+      co2: (m.CO2 <= THRESHOLDS.co2.max),
+      lux: (m.Lux >= THRESHOLDS.lux.min && m.Lux <= THRESHOLDS.lux.max)
+    };
+    return { ...map, passCount: Object.values(map).filter(Boolean).length };
+  }
+
+  function getMetricsSnapshotByMinute(minute, data = state.lastSimData) {
+    if (!data || !(data.temp || data.t) || (data.temp || data.t).length === 0) return null;
+    const m = getMetricsAtIndex(data, minute);
+    const compliance = getComplianceFromMetrics(m);
+    return {
+      metrics: { lux: m.Lux, temp: m.T, rh: m.RH, co2: m.CO2 },
+      compliance,
+      issues: computeIssuesFromMetrics(m)
+    };
+  }
+
+  function formatCompliance(comp) {
+    if (!comp) return '-/4';
+    return `${comp.passCount}/4`;
+  }
+
+  function appendEventLog(entry) {
+    state.eventLogs.push({
+      id: `log_${Date.now()}_${state.eventLogs.length + 1}`,
+      type: 'add',
+      interventionId: null,
+      startMin: 0,
+      endMin: 0,
+      changes: {},
+      beforeMetrics: null,
+      afterMetrics: null,
+      complianceBefore: null,
+      complianceAfter: null,
+      issuesBefore: [],
+      issuesAfter: [],
+      conflictResolution: [],
+      createdAt: Date.now(),
+      ...entry
+    });
+  }
+
+  function buildConflictResolution(intervention) {
+    const result = [];
+    const overlap = (a, b) => Math.max(a.startMin, b.startMin) < Math.min(a.endMin, b.endMin);
+    state.interventions.forEach((prev) => {
+      if (prev.id === intervention.id || !overlap(prev, intervention)) return;
+      const prevKeys = Object.keys(prev.changes || {});
+      const currKeys = Object.keys(intervention.changes || {});
+      const fields = currKeys.filter(f => prevKeys.includes(f));
+      if (fields.length > 0) result.push({ winner: intervention.id, loser: prev.id, fields, rule: 'later_added_wins' });
+    });
+    return result;
+  }
+
+  function ensureEndSummaryLogs() {
+    if (!state.lastSimData) return;
+    state.interventions.forEach((ev) => {
+      const exists = state.eventLogs.some(log => log.type === 'end_summary' && log.interventionId === ev.id && log.endMin === ev.endMin);
+      if (exists) return;
+      const before = getMetricsSnapshotByMinute(ev.startMin);
+      const after = getMetricsSnapshotByMinute(Math.max(ev.startMin, (ev.endMin ?? 1) - 1));
+      if (!before || !after) return;
+      appendEventLog({
+        type: 'end_summary',
+        interventionId: ev.id,
+        startMin: ev.startMin,
+        endMin: ev.endMin,
+        changes: ev.changes || {},
+        beforeMetrics: before.metrics,
+        afterMetrics: after.metrics,
+        complianceBefore: formatCompliance(before.compliance),
+        complianceAfter: formatCompliance(after.compliance),
+        issuesBefore: before.issues,
+        issuesAfter: after.issues,
+        conflictResolution: ev.conflictResolution || [],
+        createdAt: Date.now()
+      });
+    });
   }
 
   function logInitialProblem() {
@@ -1558,6 +1809,13 @@
   }
 
   function getInterventionDisplayControls(ev) {
+    const baseCore = state.baselineControls
+      ? normalizeControlsToCoreShape(state.baselineControls)
+      : normalizeControlsToCoreShape(state.stagedControls);
+    const core = mergeCoreControls(baseCore, normalizeCoreChanges(ev?.changes || {}));
+    return mapCoreToLegacyControls(core, state.stagedControls);
+  }
+
     const core = normalizeControlsToCoreShape(ev?.changes || {});
     return mapCoreToLegacyControls(core, state.stagedControls);
   }
@@ -1577,7 +1835,11 @@
       lines.push("暂无策略。请先拉取数据。");
     }
 
-    return lines.join('\n');
+  function buildStrategySummaryText() {
+    if (!state.eventLogs || state.eventLogs.length === 0) return "暂无策略日志。";
+    return state.eventLogs.map((log) => {
+      return `[${log.type}] ${log.startMin}-${log.endMin}min 达标 ${log.complianceBefore || '-/4'}→${log.complianceAfter || '-/4'}`;
+    }).join('\n');
   }
 
   function updateStrategySummary() {
@@ -1591,16 +1853,17 @@
   function getComplianceInfo(minute) {
     if (!state.lastSimData || !state.lastSimData.t) return "达标项：-/4";
     const m = getMetricsAtIndex(state.lastSimData, minute);
-
-    const tOk = (m.T >= THRESHOLDS.temp.min && m.T <= THRESHOLDS.temp.max);
+    const season = (state.initData?.season === '冬') ? 'winter' : 'summer';
+    const tempRange = THRESHOLDS.temp[season];
+    const tOk = (m.T >= tempRange.min && m.T <= tempRange.max);
     const rOk = (m.RH >= THRESHOLDS.rh.min && m.RH <= THRESHOLDS.rh.max);
-    const aOk = (m.CO2 <= THRESHOLDS.co2.max && m.PM <= THRESHOLDS.pm25.max);
-    const lOk = (m.Lux >= THRESHOLDS.lux.min && m.Noise <= THRESHOLDS.noise.max);
+    const cOk = (m.CO2 <= THRESHOLDS.co2.max);
+    const lOk = (m.Lux >= THRESHOLDS.lux.min && m.Lux <= THRESHOLDS.lux.max);
 
-    const count = [tOk, rOk, aOk, lOk].filter(Boolean).length;
+    const count = [tOk, rOk, cOk, lOk].filter(Boolean).length;
     const mark = (ok) => ok ? '√' : '×';
 
-    return `达标项：${count}/4（温度${mark(tOk)} 湿度${mark(rOk)} 空气${mark(aOk)} 声光${mark(lOk)}）`;
+    return `达标项：${count}/4（温度${mark(tOk)} 湿度${mark(rOk)} CO2${mark(cOk)} 光照${mark(lOk)}）`;
   }
 
   function getResolvedInfo(startMin, endMin) {
@@ -1619,27 +1882,30 @@
   function renderStrategyPanel() {
     const container = document.getElementById('eventLogSection');
     container.innerHTML = '';
+    ensureEndSummaryLogs();
 
-    const problem = state.problemText ? state.problemText : "暂无问题";
-    const problemDiv = document.createElement('div');
-    const problemOk = (problem === "暂无问题");
-    const comp0 = getComplianceInfo(0);
-    problemDiv.className = `p-2 rounded border ${problemOk ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-red-50 text-red-800 border-red-200'} log-entry-new`;
-    problemDiv.innerHTML = `
-      <div class="font-semibold mb-1">发现问题：${problem}</div>
-      <div class="text-tiny text-slate-500">解决问题：无</div>
-      <div class="text-tiny text-slate-500">${comp0}</div>
-    `;
-    container.appendChild(problemDiv);
+    const logs = state.eventLogs.slice().sort((a, b) => a.createdAt - b.createdAt);
+    if (logs.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = "p-2 rounded border bg-slate-50 border-slate-200 text-slate-500 text-xs";
+      empty.innerText = "暂无结构化日志。请先应用干预。";
+      container.appendChild(empty);
+      return;
+    }
 
-    for (let i = 0; i < state.interventions.length; i++) {
-      const ev = state.interventions[i];
-      const endIdx = clamp((ev.endMin ?? 0) - 1, 0, (state.lastSimData?.t?.length ?? 1) - 1);
-      const resText = getResolvedInfo(ev.startMin, endIdx);
-      const compText = getComplianceInfo(endIdx);
+    logs.forEach((log) => {
       const div = document.createElement('div');
       div.className = "p-2 rounded border bg-white border-indigo-200 text-slate-800 log-entry-new";
+      const changesTxt = Object.keys(log.changes || {}).map(k => `${k}:${log.changes[k]}`).join(', ') || '-';
+      const issuesBefore = (log.issuesBefore || []).join('、') || '无';
+      const issuesAfter = (log.issuesAfter || []).join('、') || '无';
       div.innerHTML = `
+
+        <div class="font-semibold text-xs text-indigo-700 mb-1">[${log.type}] ${log.startMin}–${log.endMin}min</div>
+        <div class="text-tiny text-slate-600">干预字段：${changesTxt}</div>
+        <div class="text-tiny text-slate-500">达标变化：${log.complianceBefore || '-/4'} → ${log.complianceAfter || '-/4'}</div>
+        <div class="text-tiny text-slate-500">问题变化：${issuesBefore} → ${issuesAfter}</div>
+
         <div class="flex items-start justify-between gap-2">
           <div class="flex-1 space-y-1">
             <div class="font-semibold">策略${i+1}：${ev.startMin}–${ev.endMin}min</div>
@@ -1655,7 +1921,19 @@
         </div>
       `;
       container.appendChild(div);
-    }
+    });
+
+    state.interventions.forEach((ev, idx) => {
+      const row = document.createElement('div');
+      row.className = "p-2 rounded border bg-indigo-50 border-indigo-200 text-slate-700";
+      row.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span class="text-xs">进行中策略${idx + 1}：${ev.startMin}–${ev.endMin}min</span>
+          <button class="text-xs text-red-600 hover:text-red-500" onclick="deleteIntervention(${idx})"><i class="fas fa-trash"></i></button>
+        </div>
+      `;
+      container.appendChild(row);
+    });
   }
 
   function scrollStrategyToBottom() {
@@ -1665,16 +1943,19 @@
   }
 
   function evaluate(data) {
-    if (!data || !data.t || data.t.length === 0) return;
+    const tempSeries = data?.temp || data?.t || [];
+    if (!data || tempSeries.length === 0) return;
 
-    const lastIdx = data.t.length - 1;
+    const lastIdx = tempSeries.length - 1;
     const m = getMetricsAtIndex(data, lastIdx);
     const issues = computeIssuesFromMetrics(m);
 
-    const tempOk = (m.T >= THRESHOLDS.temp.min && m.T <= THRESHOLDS.temp.max);
+    const season = (state.initData?.season === '冬') ? 'winter' : 'summer';
+    const tempRange = THRESHOLDS.temp[season];
+    const tempOk = (m.T >= tempRange.min && m.T <= tempRange.max);
     const rhOk = (m.RH >= THRESHOLDS.rh.min && m.RH <= THRESHOLDS.rh.max);
-    const airOk = (m.CO2 <= THRESHOLDS.co2.max && m.PM <= THRESHOLDS.pm25.max);
-    const lightOk = (m.Lux >= THRESHOLDS.lux.min && m.Noise <= THRESHOLDS.noise.max);
+    const co2Ok = (m.CO2 <= THRESHOLDS.co2.max);
+    const luxOk = (m.Lux >= THRESHOLDS.lux.min && m.Lux <= THRESHOLDS.lux.max);
 
     const setBadge = (id, ok) => {
       const el = document.getElementById(id);
@@ -1682,11 +1963,12 @@
       el.innerText = ok ? '达标' : '未达标';
     };
 
-    setBadge('badge-temp', tempOk && rhOk);
-    setBadge('badge-air', airOk);
-    setBadge('badge-light', lightOk);
+    setBadge('badge-lux', luxOk);
+    setBadge('badge-temp', tempOk);
+    setBadge('badge-rh', rhOk);
+    setBadge('badge-co2', co2Ok);
 
-    const passCount = [tempOk, rhOk, airOk, lightOk].filter(Boolean).length;
+    const passCount = [tempOk, rhOk, co2Ok, luxOk].filter(Boolean).length;
     document.getElementById('passCount').innerText = String(passCount);
 
     const summary = document.getElementById('statusSummary');
@@ -1708,8 +1990,8 @@
     if (state.initData && state.initData.people) {
       checkLog('temp', tempOk, '温度');
       checkLog('rh', rhOk, '湿度');
-      checkLog('air', airOk, '空气质量');
-      checkLog('light', lightOk, '声光环境');
+      checkLog('air', co2Ok, 'CO2');
+      checkLog('light', luxOk, '光照');
     }
   }
 
@@ -1721,284 +2003,143 @@
      - 天气：恒定/日变化
      - 建筑：UA + 渗透 ACH_inf
   ========================= */
-  function achFromFanLevel(level, ventParams) {
-    if (level === 'LOW') return ventParams.ach_LOW;
-    if (level === 'MID') return ventParams.ach_MID;
-    if (level === 'HIGH') return ventParams.ach_HIGH;
-    return 0;
+  function getMinuteOfDay(minute, totalMinutes) {
+    const total = Math.max(1, totalMinutes);
+    return Math.floor((minute / total) * 1440) % 1440;
   }
 
-  function windowAchFromRatio(ratioPct, ventParams) {
-    const r = clamp(ratioPct, 0, 100) / 100;
-    return ventParams.ach_win_max * r;
+  function getWeatherLux(weatherType, minuteOfDay) {
+    const dayWave = Math.max(0, Math.sin((2 * Math.PI * (minuteOfDay - 360)) / 1440));
+    const factor = { '阴': 0.45, '多云': 0.7, '晴': 1.0 }[weatherType] ?? 0.6;
+    return 900 * factor * dayWave + 40;
   }
 
-  function acFanKMultiplier(level) {
-    if (level === 'LOW') return 0.8;
-    if (level === 'MID') return 1.0;
-    if (level === 'HIGH') return 1.2;
-    return 1.0;
+  function getBaseTemp(season, minuteOfDay) {
+    const mean = (season === '冬') ? 19 : 26;
+    const amp = (season === '冬') ? 2.5 : 2.0;
+    return mean + amp * Math.sin((2 * Math.PI * (minuteOfDay - 420)) / 1440);
   }
 
-  function acFanPower(level, hvac) {
-    if (level === 'LOW') return hvac.P_acFan_LOW ?? 0;
-    if (level === 'MID') return hvac.P_acFan_MID ?? 0;
-    if (level === 'HIGH') return hvac.P_acFan_HIGH ?? 0;
-    return 0;
+  function getBaseHumidityRatio(minuteOfDay) {
+    return 0.008 + 0.0015 * Math.sin((2 * Math.PI * (minuteOfDay + 180)) / 1440);
   }
 
-  function camModeFactor(mode, cam) {
-    if (mode === 'LOW') return cam.cam_LOW_factor ?? 0.7;
-    if (mode === 'HIGH') return cam.cam_HIGH_factor ?? 1.4;
-    return 1.0;
-  }
-
-  function diurnalValue(mean, amp, minute, totalMinutes, phase = 0) {
-    if (!amp || amp === 0) return mean;
-    const x = (2 * Math.PI) * (minute / Math.max(1, totalMinutes)) + phase;
-    return mean + amp * Math.sin(x);
-  }
-
-  function getOutdoorAtMinute(minute, totalMinutes) {
-    const wx = state.weather;
-    const mode = wx.mode;
-
-    if (mode === 'daily') {
-      return {
-        Tout: diurnalValue(wx.T_mean ?? 0, wx.T_amp ?? 0, minute, totalMinutes, wx.phase ?? 0),
-        RHout: clamp(diurnalValue(wx.RH_mean ?? 0, wx.RH_amp ?? 0, minute, totalMinutes, (wx.phase ?? 0) + 1.2), 0, 100),
-        Pout: Math.max(0, diurnalValue(wx.PM_mean ?? 0, wx.PM_amp ?? 0, minute, totalMinutes, (wx.phase ?? 0) + 2.1)),
-        Eday: Math.max(0, diurnalValue(wx.E_mean ?? 0, wx.E_amp ?? 0, minute, totalMinutes, (wx.phase ?? 0) - 1.0))
-      };
-    }
-    // constant
-    return {
-      Tout: wx.T_mean ?? 0,
-      RHout: clamp(wx.RH_mean ?? 0, 0, 100),
-      Pout: Math.max(0, wx.PM_mean ?? 0),
-      Eday: Math.max(0, wx.E_mean ?? 0)
+  function getVentFlowFromLevel(level, volume, modelCo2, ventParams) {
+    const safe = (v, fb = 0) => (isFinite(parseFloat(v)) ? parseFloat(v) : fb);
+    const achMap = {
+      OFF: 0,
+      // 兼容来源：state.deviceParams.vent 仍保留作过渡映射，主逻辑参数来自 modelParams/initData
+      LOW: safe(ventParams.ach_LOW, safe(modelCo2.ACH, 1.19) * 0.6),
+      MID: safe(ventParams.ach_MID, safe(modelCo2.ACH, 1.19)),
+      HIGH: safe(ventParams.ach_HIGH, safe(modelCo2.ACH, 1.19) * 1.5)
     };
+    const ach = safe(achMap[level], 0);
+    return Math.max(0, ach * volume / 3600);
+  }
+
+  function getTempThresholdBySeason() {
+    return (state.initData?.season === '冬') ? THRESHOLDS.temp.winter : THRESHOLDS.temp.summer;
   }
 
   function runSimulation() {
-    const gp = state.globalParams;
-    const bd = state.building;
+    const num = (v, fb) => (isFinite(parseFloat(v)) ? parseFloat(v) : fb);
+    const init = state.initData || {};
+    const model = state.modelParams || {};
+    const lightParam = model.light || {};
+    const tempParam = model.temp || {};
+    const humParam = model.humidity || {};
+    const co2Param = model.co2 || {};
+    const ventParams = state.deviceParams.vent || {};
 
-    const hvac = state.deviceParams.hvac;
-    const vent = state.deviceParams.vent;
-    const light = state.deviceParams.light;
-    const audio = state.deviceParams.audio;
-    const mic = state.deviceParams.mic;
-    const cam = state.deviceParams.cam;
-    const sensor = state.deviceParams.sensor;
+    const N = Math.max(1, num(init.people, 40));
+    const V = Math.max(20, num(init.volume, 200));
+    const A = Math.max(10, num(init.area, 62.5));
+    const weatherType = init.weatherType || '多云';
+    const season = init.season || '夏';
+    const dt = 60;
+    const simMinutes = clamp(state.simTotalMinutes, 0, 1440);
+    const totalSteps = simMinutes + 1;
 
-    const inputs = {
-      N: safeNum('initPeople', 40),
-      V: Math.max(20, safeNum('roomVol', 200)),
-      T_init: safeNum('initTemp', 25),
-      RH_init: safeNum('initRH', 50),
-      C_init: safeNum('initCO2', gp.Cout ?? 450),
-      P_init: safeNum('initPM', (state.indoor.pm25_init > 0 ? state.indoor.pm25_init : 20)),
-      Cout: gp.Cout ?? 450,
-      Vout: 0.03,
-      Voc_init: 0.1
-    };
+    const res = { time: [], temp: [], t: [], rh: [], co2: [], pm: [], tvoc: [], lux: [], noise: [], power: [], energy: [] };
 
-    const dtSec = 60;
-    const T_total_minutes = clamp(state.simTotalMinutes, 0, 1440);
-    const totalSteps = T_total_minutes + 1;
-
-    // 房间面积：用于照度公式
-    const H = Math.max(2.2, bd.H ?? 3.2);
-    const A_room = Math.max(10, inputs.V / H);
-
-    const res = { t:[], rh:[], co2:[], pm:[], tvoc:[], lux:[], noise:[], power:[], energy:[] };
-
-    let T = inputs.T_init;
-    let RH = inputs.RH_init;
-    let C = inputs.C_init;
-    let P = inputs.P_init;
-    let Voc = inputs.Voc_init;
-
-    let I_noise = Math.pow(10, (gp.L_base ?? 40) / 10);
-    let Energy_total = 0;
+    let deltaT = 0;
+    let deltaW = 0;
+    let C = Math.max(300, num(init.init_co2, num(co2Param.C_out, 442)));
 
     for (let i = 0; i < totalSteps; i++) {
       const minute = i;
+      const minuteOfDay = getMinuteOfDay(minute, simMinutes);
+      const dev = getActiveControlsAtMinute(minute);
 
-      res.t.push(T);
-      res.rh.push(RH);
-      res.co2.push(C);
-      res.pm.push(P);
-      res.tvoc.push(Voc);
-
-      const dev = (i === totalSteps - 1)
-        ? getActiveControlsAtMinute(Math.max(0, minute - 1))
-        : getActiveControlsAtMinute(minute);
-
-      // 外界（天气）
-      const out = getOutdoorAtMinute(minute, T_total_minutes);
-      const Tout = out.Tout;
-      const RHout = out.RHout;
-      const Pout = out.Pout;
-      const Eday = out.Eday;
-
-      // 通风与开窗 + 渗透（建筑）
-      const ach_vent = achFromFanLevel(dev.ventFan || 'OFF', vent);
-      const ach_win = windowAchFromRatio(parseFloat(dev.winRatio ?? 0), vent);
-      const ach_inf = Math.max(0, bd.ach_inf ?? 0);
-
-      const Q_vent = ((ach_vent) / 3600) * inputs.V;
-      const Q_win  = ((ach_win)  / 3600) * inputs.V;
-      const Q_inf  = ((ach_inf)  / 3600) * inputs.V;
-
-      const Q_total = Math.max(0, Q_vent + Q_win + Q_inf);
-
-      // 窗帘：用于日照透过（这里约定：curtain=开启率，开启越大遮挡越少）
-      const uCurtain = clamp(parseFloat(dev.curtain ?? 0), 0, 100) / 100; // 1=全开
-      const alphaCurtain = clamp(bd.alphaCurtain ?? 0.9, 0, 1);
-      const E_day_in = Eday * (1 - alphaCurtain * (1 - uCurtain)); // 关闭时透光更少
-
-      // 灯：按文档 E = u * N*Phi*CU*K / A
       const u_light = clamp(parseFloat(dev.lightPct ?? 0), 0, 100) / 100;
-      const E_light = u_light * (light.N * light.Phi * light.CU * light.K) / A_room;
-      const Lux = Math.max(0, E_day_in + E_light);
+      const St = 1 - (clamp(parseFloat(dev.curtain ?? 0), 0, 100) / 100);
+      const u_cool = !!dev.coolOn ? 1 : 0;
+      const u_heat = !!dev.heatOn ? 1 : 0;
+      const u_dehum = !!dev.dehumOn ? 1 : 0;
+      const ventLevel = (dev.ventLevel || 'OFF');
+
+      // 光照主数据源：initData + modelParams；deviceParams.light 仅做兼容回退
+      const nLamp = num(init.lampCount, num(state.deviceParams.light.N, 10));
+      const lampPhi = num(init.luminousFlux, num(state.deviceParams.light.Phi, 1500));
+      const E_lamp = (nLamp * lampPhi * num(lightParam.eta, 0.6) / A) * u_light;
+      let E_out = getWeatherLux(weatherType, minuteOfDay);
+      if (E_out < num(lightParam.epsilonSun, 30)) {
+        const E_bg = num(lightParam.E_bg, 5);
+        const tauTwSec = Math.max(1, num(lightParam.tau_tw, 30) * 60);
+        E_out = E_bg + (E_out - E_bg) * Math.exp(-dt / tauTwSec);
+      }
+      const Lux = Math.max(0, E_out * (1 - St) + E_lamp);
+
+      // 温度主数据源：initData.season + modelParams.temp + 合成控制量
+      const T_base = getBaseTemp(season, minuteOfDay);
+      const lambdaT = (1 / Math.max(1, num(tempParam.tau_occ, 1522))) + (num(tempParam.k_ac, 2.282e-04) * u_cool);
+      const aT = Math.exp(-lambdaT * dt);
+      const ST = num(tempParam.k_occ, 1.175e-05) * (num(tempParam.s_occ, 1.09) * N) + num(tempParam.k_heat, 2.013e-03) * u_heat;
+      const deltaTNext = (lambdaT > 0) ? (aT * deltaT + (ST / lambdaT) * (1 - aT)) : deltaT;
+      const T = T_base + deltaT;
+
+      // 湿度主数据源：modelParams.humidity + 合成控制量（deltaW -> w -> RH）
+      const w_base = getBaseHumidityRatio(minuteOfDay);
+      const lambdaW = 1 / Math.max(1, num(humParam.tau_w, 7200));
+      const aW = Math.exp(-lambdaW * dt);
+      const SW = num(humParam.alpha, 1.105e-09) * (num(humParam.s_occ_w, 1.0) * N) - num(humParam.beta, 2.953e-07) * (num(humParam.s_dehum, 1.0) * u_dehum);
+      const deltaWNext = aW * deltaW + (SW / lambdaW) * (1 - aW);
+      const w = w_base + deltaW;
+      // 稳定性保护：避免除零/NaN，RH 强制限制在 0~100
+      const humidityDen = Math.max(0.0001, 0.009 + 0.0003 * T);
+      const RH_raw = (w / humidityDen) * 100;
+      const RH = clamp(num(RH_raw, 50), 0, 100);
+
+      // CO2主数据源：modelParams.co2 + 合成控制量（通风档位）
+      const Q = getVentFlowFromLevel(ventLevel, V, co2Param, ventParams); // OFF=>0
+      const source = (1e6 / V) * N * num(co2Param.s_occ_co2, 3.582) * num(co2Param.q_person, 1.784e-07);
+      const k = (Q * num(co2Param.s_vent, 1.0)) / V;
+      let C_next;
+      if (k > 0) {
+        const aC = Math.exp(-k * dt);
+        const Css = (num(co2Param.C_out, 442) + source / k);
+        C_next = aC * C + (1 - aC) * Css;
+      } else {
+        C_next = C + dt * source;
+      }
+
+      res.time.push(minute);
+      res.temp.push(T);
+      res.t.push(T); // 兼容旧调用
+      res.rh.push(RH);
+      res.co2.push(Math.max(300, C));
       res.lux.push(Lux);
 
-      // 噪声：人声 + 音箱 + 话筒
-      const s_spk = !!dev.spkMaster ? 1 : 0;
-      const spkVol = clamp(parseFloat(dev.spkVol ?? 0), 0, 100);
-      const L_spk = (audio.L_spk_base ?? 45) + (audio.L_spk_gain ?? 35) * (spkVol / 100);
+      // 兼容残留数组（不参与主图和主评估）
+      res.pm.push(state.indoor.pm25_init || 20);
+      res.tvoc.push(0.1);
+      res.noise.push(40);
+      res.power.push(0);
+      res.energy.push(0);
 
-      const s_mic = !!dev.micMaster ? 1 : 0;
-      const micGain = clamp(parseFloat(dev.micGain ?? 50), 0, 100) / 100;
-      const L_mic_eff = (mic.L_mic ?? 35) + 20 * Math.log10(0.1 + 0.9 * micGain);
-
-      const I_target =
-        Math.pow(10, (gp.L_base ?? 40) / 10) +
-        inputs.N * Math.pow(10, (gp.L_occ_per ?? 25) / 10) +
-        s_spk * Math.pow(10, L_spk / 10) +
-        s_mic * Math.pow(10, L_mic_eff / 10);
-
-      // HVAC（控温 + 风机）
-      const acOn = !!dev.acMaster;
-      const acTemp = parseFloat(dev.acTemp ?? 25.5);
-      const acFan = (dev.acFan || 'MID');
-
-      let Q_HVAC = 0;      // W（正值加热，负值制冷）
-      let P_acFan = 0;     // W（电功率）
-      if (acOn) {
-        const err = acTemp - T; // 目标-当前
-        const K_eff = (hvac.K ?? 1200) * acFanKMultiplier(acFan);
-        let req = K_eff * err;
-        req = clamp(req, -(hvac.Qmax ?? 8000), (hvac.Qmax ?? 8000));
-        Q_HVAC = req;
-        P_acFan = acFanPower(acFan, hvac);
-      }
-
-      // 灯电功率：P = u * N * Pmax
-      const P_light_elec = u_light * light.N * (light.P_light_max ?? 12);
-
-      // 音箱电功率：按比例
-      const P_spk = s_spk * (audio.P_spk_max ?? 60) * (spkVol / 100);
-
-      // 话筒电功率：按增益比例
-      const P_mic = s_mic * (mic.P_mic_dev ?? 15) * micGain;
-
-      // 摄像机电功率：按模式系数
-      const s_cam = !!dev.camMaster ? 1 : 0;
-      const camMode = (dev.camMode || 'MID');
-      const P_cam = s_cam * (cam.P_cam_dev ?? 25) * camModeFactor(camMode, cam);
-
-      // 检测器电功率：随采样率上升
-      const s_sensor = !!dev.sensorMaster ? 1 : 0;
-      const sensorRate = clamp(parseFloat(dev.sensorRate ?? 30), 1, 60);
-      const idleFactor = clamp(sensor.sensor_idle_factor ?? 0.5, 0, 1);
-      const sensorFactor = idleFactor + (1 - idleFactor) * (sensorRate / 60);
-      const P_sensor = s_sensor * (sensor.P_sensor_dev ?? 8) * sensorFactor;
-
-      // HVAC 压缩机电功率：|Q|/COP
-      const P_ac_elec = acOn ? (Math.abs(Q_HVAC) / Math.max(0.8, (hvac.COP ?? 3.2))) : 0;
-
-      const Power_t = P_ac_elec + P_acFan + P_light_elec + P_spk + P_mic + P_cam + P_sensor;
-      res.power.push(Power_t);
-      res.energy.push(Energy_total);
-
-      // 噪声状态推进
-      const tau = Math.max(5, gp.tau_noise ?? 30);
-      const next_I_noise = (i === totalSteps - 1) ? I_noise : (I_noise + (dtSec / tau) * (I_target - I_noise));
-      const L_noise = 10 * Math.log10(Math.max(I_noise, 1e-12));
-      res.noise.push(clamp(L_noise, 0, 120));
-
-      if (i === totalSteps - 1) break;
-
-      // PM2.5：排放 + 交换 + 沉降（通风带过滤，开窗与渗透不带过滤）
-      const etaVent = clamp(vent.eta_vent ?? 0.6, 0, 1);
-      const dP =
-        ( (gp.Epm ?? 2) / inputs.V ) +
-        (Q_vent / inputs.V) * (((1 - etaVent) * Pout) - P) +
-        ((Q_win + Q_inf) / inputs.V) * (Pout - P) -
-        ((gp.kdep ?? 0.0001) * P);
-      const next_P = Math.max(0, P + dtSec * dP);
-
-      // CO2：人源 + 混合交换（通风+开窗+渗透）
-      const dC =
-        (1e6 / inputs.V) * inputs.N * (gp.eco2 ?? 5e-6) +
-        (Q_total / inputs.V) * ((inputs.Cout ?? 450) - C);
-      const next_C = Math.max(0, C + dC * dtSec);
-
-      // TVOC：排放 + 交换 + 衰减
-      const dV =
-        ((gp.Evoc ?? 0.03) / inputs.V) +
-        (Q_total / inputs.V) * (inputs.Vout - Voc) -
-        (gp.kvoc ?? 0.00005) * Voc;
-      const next_Voc = Math.max(0, Voc + dV * dtSec);
-
-      // 热平衡：UA*(Tout-T) + 人体 + 日照 + 灯热 + 通风换热 + 设备热增益 + HVAC
-      const Q_occ = inputs.N * (gp.Qocc_per ?? 80);
-
-      // 日射热：用日照与窗帘粗略对应（可按你文档一步替换）
-      const Q_solar = 0.2 * E_day_in * A_room * 0.01; // W，保留量级可控的简化项
-
-      // 灯热：按 η_heat * P_light_elec
-      const Q_light_heat = (light.eta_heat_light ?? 1.0) * P_light_elec;
-
-      // 通风换热：ρ*cp*Q*(Tout-T)
-      const Q_vent_heat = (gp.rho ?? 1.2) * (gp.cp ?? 1005) * Q_total * (Tout - T);
-
-      // 设备热：默认电功率多转热（不含 HVAC 压缩机）
-      const heatFracEquip = 1.0;
-      const Q_equip_heat = heatFracEquip * (P_acFan + P_spk + P_mic + P_cam + P_sensor);
-
-      const UA = bd.UA ?? 150;
-      const heat_sum = Q_HVAC + UA * (Tout - T) + Q_occ + Q_solar + Q_light_heat + Q_vent_heat + Q_equip_heat;
-      const dT = (heat_sum * dtSec) / ((gp.rho ?? 1.2) * (gp.cp ?? 1005) * inputs.V);
-      const next_T = T + dT;
-
-      // 湿度：混合 + 除湿（用强度 D 与目标RH）
-      const mixRate = clamp((Q_total / inputs.V), 0, 0.02); // 1/s 量级
-      let next_RH = RH + (RHout - RH) * (mixRate * dtSec);
-
-      if (acOn && !!dev.acDehum) {
-        const target = clamp(hvac.RH_dehum_target ?? 40, 20, 70);
-        const D = clamp(hvac.Ddehum ?? 0.35, 0, 1);
-        next_RH = next_RH + (target - next_RH) * D;
-      }
-
-      // 温度变化对相对湿度的微调（保持原先“轻量”风格）
-      if (dT > 0) next_RH -= 0.15;
-      if (dT < 0) next_RH += 0.15;
-      next_RH = clamp(next_RH, 0, 100);
-
-      // 能耗累计（kWh）
-      Energy_total += (Power_t * dtSec) / 3600000;
-
-      P = next_P;
-      C = next_C;
-      Voc = next_Voc;
-      T = next_T;
-      RH = next_RH;
-      I_noise = next_I_noise;
+      deltaT = deltaTNext;
+      deltaW = deltaWNext;
+      C = Math.max(300, C_next);
     }
 
     state.lastSimData = res;
@@ -2069,57 +2210,39 @@
 
     const common = { pointRadius: 0, borderWidth: 2, tension: 0.25, fill: false };
     const intAnnotations = makeInterventionAnnotations();
+    const tempRange = getTempThresholdBySeason();
+
+    charts.lux.data.labels = labels;
+    charts.lux.data.datasets = [{ ...common, label: '光照(Lux)', data: data.lux, borderColor: '#f59e0b' }];
+    charts.lux.options.plugins.annotation.annotations = {
+      bandLux: { type: 'box', yMin: THRESHOLDS.lux.min, yMax: THRESHOLDS.lux.max, yScaleID: 'y', backgroundColor: 'rgba(245, 158, 11, 0.12)', borderWidth: 0 },
+      ...intAnnotations
+    };
+    charts.lux.update();
 
     charts.temp.data.labels = labels;
-    charts.temp.data.datasets = [
-      { ...common, label: '温度(°C)', data: data.t, borderColor: '#ef4444', yAxisID: 'y' },
-      { ...common, label: '湿度(%)', data: data.rh, borderColor: '#3b82f6', borderDash: [3, 3], yAxisID: 'y1' }
-    ];
+    charts.temp.data.datasets = [{ ...common, label: '温度(℃)', data: (data.temp || data.t), borderColor: '#ef4444' }];
     charts.temp.options.plugins.annotation.annotations = {
-      boxTemp: { type: 'box', yMin: THRESHOLDS.temp.min, yMax: THRESHOLDS.temp.max, yScaleID: 'y', backgroundColor: 'rgba(34, 197, 94, 0.15)', borderWidth: 0, drawTime: 'beforeDatasetsDraw' },
-      boxRH: { type: 'box', yMin: THRESHOLDS.rh.min, yMax: THRESHOLDS.rh.max, yScaleID: 'y1', backgroundColor: 'rgba(59, 130, 246, 0.10)', borderWidth: 0, drawTime: 'beforeDatasetsDraw' },
-      lineTempMin: { type: 'line', yMin: THRESHOLDS.temp.min, yMax: THRESHOLDS.temp.min, borderColor: 'rgba(34, 197, 94, 0.5)', borderWidth: 1, borderDash: [2, 2], yScaleID: 'y' },
-      lineTempMax: { type: 'line', yMin: THRESHOLDS.temp.max, yMax: THRESHOLDS.temp.max, borderColor: 'rgba(34, 197, 94, 0.5)', borderWidth: 1, borderDash: [2, 2], yScaleID: 'y' },
+      bandTemp: { type: 'box', yMin: tempRange.min, yMax: tempRange.max, yScaleID: 'y', backgroundColor: 'rgba(239, 68, 68, 0.10)', borderWidth: 0 },
       ...intAnnotations
     };
     charts.temp.update();
 
-    const pmMax = Math.max(THRESHOLDS.pm25.max * 1.2, ...data.pm, 60);
-    charts.air.data.labels = labels;
-    charts.air.data.datasets = [
-      { ...common, label: 'CO2(ppm)', data: data.co2, borderColor: '#10b981', yAxisID: 'y' },
-      { ...common, label: 'PM2.5(μg/m³)', data: data.pm, borderColor: '#64748b', yAxisID: 'y1' }
-    ];
-    charts.air.options.scales.y1.suggestedMax = pmMax;
-    charts.air.options.plugins.annotation.annotations = {
-      co2Line: {
-        type: 'line', yScaleID: 'y', yMin: THRESHOLDS.co2.max, yMax: THRESHOLDS.co2.max,
-        borderColor: 'rgba(16, 185, 129, 0.6)', borderWidth: 1, borderDash: [6, 4],
-        label: { content: 'CO2<1000', display: true, position: 'start', backgroundColor: 'rgba(16, 185, 129, 0.85)', color: 'white', font: { size: 9 } }
-      },
-      pmLine: {
-        type: 'line', yScaleID: 'y1', yMin: THRESHOLDS.pm25.max, yMax: THRESHOLDS.pm25.max,
-        borderColor: 'rgba(59, 130, 246, 0.6)', borderWidth: 1, borderDash: [6, 4],
-        label: { content: 'PM2.5<35', display: true, position: 'end', backgroundColor: 'rgba(59, 130, 246, 0.85)', color: 'white', font: { size: 9 } }
-      },
+    charts.rh.data.labels = labels;
+    charts.rh.data.datasets = [{ ...common, label: '湿度(%)', data: data.rh, borderColor: '#3b82f6' }];
+    charts.rh.options.plugins.annotation.annotations = {
+      bandRh: { type: 'box', yMin: THRESHOLDS.rh.min, yMax: THRESHOLDS.rh.max, yScaleID: 'y', backgroundColor: 'rgba(59, 130, 246, 0.10)', borderWidth: 0 },
       ...intAnnotations
     };
-    charts.air.update();
+    charts.rh.update();
 
-    charts.power.data.labels = labels;
-    charts.power.data.datasets = [
-      { ...common, label: '照度(Lux)', data: data.lux, borderColor: '#eab308', yAxisID: 'y' },
-      { ...common, label: '功率(W)', data: data.power, borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.10)', fill: true, yAxisID: 'y1' },
-      { ...common, label: '噪声(dB)', data: data.noise, borderColor: '#8b5cf6', borderDash: [2, 2], yAxisID: 'y2' }
-    ];
-    charts.power.options.plugins.annotation.annotations = {
-      boxLux: { type: 'box', yMin: 0, yMax: THRESHOLDS.lux.min, yScaleID: 'y', backgroundColor: 'rgba(239, 68, 68, 0.10)', borderWidth: 0, drawTime: 'beforeDatasetsDraw' },
-      boxNoise: { type: 'box', yMin: 0, yMax: THRESHOLDS.noise.max, yScaleID: 'y2', backgroundColor: 'rgba(139, 92, 246, 0.12)', borderWidth: 0, drawTime: 'beforeDatasetsDraw' },
-      lineLux: { type: 'line', yMin: THRESHOLDS.lux.min, yMax: THRESHOLDS.lux.min, borderColor: 'rgba(234, 179, 8, 0.8)', borderWidth: 1, borderDash: [4, 4], yScaleID: 'y' },
-      lineNoise: { type: 'line', yMin: THRESHOLDS.noise.max, yMax: THRESHOLDS.noise.max, borderColor: 'rgba(139, 92, 246, 0.8)', borderWidth: 1, borderDash: [4, 4], yScaleID: 'y2' },
+    charts.co2.data.labels = labels;
+    charts.co2.data.datasets = [{ ...common, label: 'CO2(ppm)', data: data.co2, borderColor: '#10b981' }];
+    charts.co2.options.plugins.annotation.annotations = {
+      bandCo2: { type: 'box', yMin: 0, yMax: THRESHOLDS.co2.max, yScaleID: 'y', backgroundColor: 'rgba(16, 185, 129, 0.10)', borderWidth: 0 },
       ...intAnnotations
     };
-    charts.power.update();
+    charts.co2.update();
   }
 
   function initCharts() {
@@ -2141,42 +2264,50 @@
     };
     const ctx = (id) => document.getElementById(id).getContext('2d');
 
-    charts.temp = new Chart(ctx('chartTempHum'), {
+    charts.lux = new Chart(ctx('chartLux'), {
       type: 'line',
       data: {},
       options: {
         ...baseCfg,
         scales: {
           ...baseCfg.scales,
-          y: { min: 15, max: 35, title: { display: true, text: '温度(°C)' } },
-          y1: { min: 0, max: 100, position: 'right', grid: { display: false }, title: { display: true, text: '湿度(%)' } }
+          y: { min: 0, max: 900, title: { display: true, text: 'Lux' } }
         }
       }
     });
 
-    charts.air = new Chart(ctx('chartAir'), {
+    charts.temp = new Chart(ctx('chartTemp'), {
       type: 'line',
       data: {},
       options: {
         ...baseCfg,
         scales: {
           ...baseCfg.scales,
-          y: { type: 'linear', position: 'left', title: { display: true, text: 'CO2 (ppm)' } },
-          y1: { type: 'linear', position: 'right', grid: { display: false }, min: 0, max: 150, title: { display: true, text: 'PM2.5 (μg/m³)' } }
+          y: { min: 10, max: 35, title: { display: true, text: '℃' } }
         }
       }
     });
 
-    charts.power = new Chart(ctx('chartPower'), {
+    charts.rh = new Chart(ctx('chartRh'), {
       type: 'line',
       data: {},
       options: {
         ...baseCfg,
         scales: {
           ...baseCfg.scales,
-          y: { type: 'linear', position: 'left', title: { display: true, text: '照度 (Lux)' } },
-          y1: { type: 'linear', position: 'right', grid: { display: false }, title: { display: true, text: '功率 (W)' } },
-          y2: { type: 'linear', position: 'right', grid: { display: false }, min: 30, max: 100, title: { display: true, text: '噪声 (dB)' } }
+          y: { min: 0, max: 100, title: { display: true, text: 'RH%' } }
+        }
+      }
+    });
+
+    charts.co2 = new Chart(ctx('chartCo2'), {
+      type: 'line',
+      data: {},
+      options: {
+        ...baseCfg,
+        scales: {
+          ...baseCfg.scales,
+          y: { min: 300, max: 1800, title: { display: true, text: 'ppm' } }
         }
       }
     });
@@ -2185,23 +2316,50 @@
   /* =========================
      导出
   ========================= */
-  function exportStrategy() {
-    const totalMin = clamp(state.simTotalMinutes, 0, 1440);
-    const header = `教室环境仿真与干预策略导出\n\n教室：${state.selection.school || '-'} / ${state.selection.type || '-'} / ${state.selection.room || '-'}\n仿真时长：${totalMin} 分钟\n导出时间：${new Date().toLocaleString('zh-CN', { hour12: false })}\n\n`;
-    const strategy = `策略汇总：\n${buildStrategySummaryText()}\n\n`;
-    const content = header + strategy;
-
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  function exportLogsCSV() {
+    const logs = state.eventLogs || [];
+    const header = ['id','type','interventionId','startMin','endMin','changes','complianceBefore','complianceAfter','issuesBefore','issuesAfter','createdAt','conflictResolution'];
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = logs.map(log => [
+      log.id, log.type, log.interventionId, log.startMin, log.endMin,
+      JSON.stringify(log.changes || {}),
+      log.complianceBefore, log.complianceAfter,
+      (log.issuesBefore || []).join('|'),
+      (log.issuesAfter || []).join('|'),
+      new Date(log.createdAt || Date.now()).toISOString(),
+      JSON.stringify(log.conflictResolution || [])
+    ].map(esc).join(','));
+    const content = [header.join(','), ...rows].join('\n');
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `策略导出_${(state.selection.room || 'room')}_${Date.now()}.txt`;
+    a.download = `event_logs_${Date.now()}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+    addSysLog("结构化日志已导出 CSV");
+  }
 
-    addSysLog("策略已导出为 TXT 文件");
+  function exportLogsJSON() {
+    const logs = state.eventLogs || [];
+    const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `event_logs_${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    addSysLog("结构化日志已导出 JSON");
+  }
+
+  function exportStrategy() {
+    // 兼容旧入口：同时导出 CSV + JSON
+    exportLogsCSV();
+    exportLogsJSON();
   }
 
   /* =========================
