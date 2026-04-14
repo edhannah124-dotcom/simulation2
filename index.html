@@ -391,17 +391,16 @@
           <option>珠海科技学院</option>
         </select>
         <select id="typeSelect" class="compact-input h-7 py-0 text-xs col-span-1">
-          <option value="">教室类型...</option>
-          <option>图书馆</option>
-          <option>体育馆</option>
-          <option>智慧教室</option>
+          <option value="">楼宇...</option>
+          <option>A楼</option>
+          <option>B楼</option>
+          <option>C楼</option>
+          <option>D楼</option>
         </select>
         <select id="roomSelect" class="compact-input h-7 py-0 text-xs col-span-1">
-          <option value="">编号...</option>
-          <option>101教室</option>
-          <option>201教室</option>
-          <option>301教室</option>
-          <option>401教室</option>
+          <option value="">教室...</option>
+          <option>101</option><option>102</option><option>103</option><option>104</option><option>105</option>
+          <option>106</option><option>107</option><option>108</option><option>109</option><option>110</option>
         </select>
       </div>
       <button onclick="pullClassroomData()" class="w-full bg-blue-600 hover:bg-blue-500 text-white h-7 rounded text-xs mt-1">
@@ -418,53 +417,39 @@
             <span><i class="fas fa-cube mr-1"></i>初始化数据</span>
           </div>
 
-          <div class="section-label">室内参数</div>
+          <div class="section-label">主初始化项</div>
           <div class="grid grid-cols-2 gap-2 mb-2">
+            <div>
+              <label class="compact-label">天气</label>
+              <select id="initWeatherType" class="compact-input" onchange="updateInitField('weatherType', this.value)">
+                <option value="阴">阴</option>
+                <option value="多云">多云</option>
+                <option value="晴">晴</option>
+              </select>
+            </div>
+            <div><label class="compact-label">获取时间</label><input type="text" id="initFetchTime" class="compact-input" readonly></div>
+            <div><label class="compact-label">灯具数量</label><input type="number" id="initLampCount" class="compact-input" min="1" onchange="updateInitField('lampCount', this.value)"></div>
+            <div><label class="compact-label">光通量(lm)</label><input type="number" id="initLumens" class="compact-input" min="100" onchange="updateInitField('luminousFlux', this.value)"></div>
+            <div><label class="compact-label">地面面积A(m²)</label><input type="number" id="initArea" class="compact-input" min="20" step="0.1" onchange="updateInitField('area', this.value)"></div>
+            <div>
+              <label class="compact-label">季节</label>
+              <select id="initSeason" class="compact-input" onchange="updateInitField('season', this.value)">
+                <option value="春">春</option><option value="夏">夏</option><option value="秋">秋</option><option value="冬">冬</option>
+              </select>
+            </div>
             <div><label class="compact-label">人数</label><input type="number" id="initPeople" data-key="people" data-status="default" class="compact-input" value="0"></div>
-            <div><label class="compact-label">教室体积(m³)</label><input type="number" id="roomVol" data-key="volume" data-status="default" class="compact-input" value="0"></div>
-            <div><label class="compact-label">初始温度 T0(℃)</label><input type="number" id="initTemp" data-key="init_temp" data-status="default" class="compact-input" value="0"></div>
-            <div><label class="compact-label">初始湿度 RH0(%)</label><input type="number" id="initRH" data-key="init_rh" data-status="default" class="compact-input" value="0"></div>
-            <div><label class="compact-label">初始 CO2(ppm)</label><input type="number" id="initCO2" data-key="init_co2" data-status="default" class="compact-input" value="0"></div>
-            <div><label class="compact-label">初始 PM2.5(μg/m³)</label><input type="number" id="initPM" data-key="init_pm" data-status="default" class="compact-input" value="0"></div>
+            <div><label class="compact-label">教室高度H(m)</label><input type="number" id="initHeight" class="compact-input" min="2" step="0.1" onchange="updateInitField('height', this.value)"></div>
+            <div class="col-span-2"><label class="compact-label">体积V=A×H (m³)</label><input type="number" id="roomVol" data-key="volume" data-status="default" class="compact-input" value="0" readonly></div>
           </div>
 
-          <!-- 第三部分：天气与建筑 -->
-          <div class="bg-white p-2 rounded border border-slate-200 shadow-sm space-y-2 mt-2">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-slate-700"><i class="fas fa-cloud-sun mr-1"></i>天气与建筑</span>
+          <details class="mt-2">
+            <summary>模型初值（兼容）</summary>
+            <div class="adv-grid">
+              <div><label class="compact-label">初始温度 T0(℃)</label><input type="number" id="initTemp" data-key="init_temp" data-status="default" class="compact-input" value="26"></div>
+              <div><label class="compact-label">初始湿度 RH0(%)</label><input type="number" id="initRH" data-key="init_rh" data-status="default" class="compact-input" value="55"></div>
+              <div class="col-span-2"><label class="compact-label">初始 CO2(ppm)</label><input type="number" id="initCO2" data-key="init_co2" data-status="default" class="compact-input" value="500"></div>
             </div>
-
-            <div class="section-label" style="margin-top:4px;">天气</div>
-            <div class="grid grid-cols-2 gap-2">
-              <div class="col-span-2">
-                <label class="compact-label">天气模式</label>
-                <select class="compact-input" id="wx_mode" onchange="updateWeatherParam('mode', this.value)">
-                  <option value="constant">恒定</option>
-                  <option value="daily">日变化</option>
-                </select>
-              </div>
-              <div><label class="compact-label">Tout_mean(℃)</label><input type="number" class="compact-input" id="wx_T_mean" onchange="updateWeatherParam('T_mean', this.value)"></div>
-              <div><label class="compact-label">Tout_amp(℃)</label><input type="number" class="compact-input" id="wx_T_amp" onchange="updateWeatherParam('T_amp', this.value)"></div>
-              <div><label class="compact-label">RH_mean(%)</label><input type="number" class="compact-input" id="wx_RH_mean" onchange="updateWeatherParam('RH_mean', this.value)"></div>
-              <div><label class="compact-label">RH_amp(%)</label><input type="number" class="compact-input" id="wx_RH_amp" onchange="updateWeatherParam('RH_amp', this.value)"></div>
-              <div><label class="compact-label">PM_mean(μg/m³)</label><input type="number" class="compact-input" id="wx_PM_mean" onchange="updateWeatherParam('PM_mean', this.value)"></div>
-              <div><label class="compact-label">PM_amp(μg/m³)</label><input type="number" class="compact-input" id="wx_PM_amp" onchange="updateWeatherParam('PM_amp', this.value)"></div>
-              <div><label class="compact-label">Eday_mean(lux)</label><input type="number" class="compact-input" id="wx_E_mean" onchange="updateWeatherParam('E_mean', this.value)"></div>
-              <div><label class="compact-label">Eday_amp(lux)</label><input type="number" class="compact-input" id="wx_E_amp" onchange="updateWeatherParam('E_amp', this.value)"></div>
-            </div>
-
-            <div class="section-label border-t border-slate-100 pt-2">建筑</div>
-            <div class="grid grid-cols-2 gap-2">
-              <div><label class="compact-label">UA (W/K)</label><input type="number" class="compact-input" id="bd_UA" onchange="updateBuildingParam('UA', this.value)"></div>
-              <div><label class="compact-label">层高 H(m)</label><input type="number" class="compact-input" id="bd_H" step="0.1" onchange="updateBuildingParam('H', this.value)"></div>
-              <div><label class="compact-label">渗透 ACH_inf</label><input type="number" class="compact-input" id="bd_ach_inf" step="0.1" onchange="updateBuildingParam('ach_inf', this.value)"></div>
-              <div><label class="compact-label">窗帘遮阳系数 α</label><input type="number" class="compact-input" id="bd_alphaCurtain" step="0.05" min="0" max="1" onchange="updateBuildingParam('alphaCurtain', this.value)"></div>
-            </div>
-            <div class="text-tiny text-slate-400">A_room 会按 A=V/H 自动计算，用于照度公式。</div>
-            <button onclick="applyWeatherBuilding()" class="w-full bg-amber-600 hover:bg-amber-500 text-white h-7 rounded text-xs">
-              应用天气/建筑参数
-            </button>
-          </div>
+          </details>
 
           <div class="section-label border-t border-slate-100 pt-2">仿真时长</div>
           <div class="grid grid-cols-2 gap-2 items-end">
@@ -484,28 +469,39 @@
             当前仿真总时长：<span id="simTotalLabel" class="font-mono text-slate-600">45m</span>
           </div>
 
-          <!-- 全局高级参数：保留给跨设备/校准类 -->
           <details>
-            <summary>全局高级参数</summary>
+            <summary>高级参数（四模型）</summary>
             <div class="adv-grid">
-              <div><label class="compact-label">ρ (kg/m³)</label><input class="compact-input" id="gp_rho" value="1.2" readonly></div>
-              <div><label class="compact-label">cp (J/kg·K)</label><input class="compact-input" id="gp_cp" value="1005" readonly></div>
-              <div class="col-span-2"><label class="compact-label">Patm (Pa)</label><input class="compact-input" id="gp_Patm" value="101325" readonly></div>
-
-              <div><label class="compact-label">Qocc_per (W/人)</label><input type="number" class="compact-input" id="gp_Qocc_per" onchange="updateGlobalParam('Qocc_per', this.value)"></div>
-              <div><label class="compact-label">eco2 (m³/s/人)</label><input type="number" class="compact-input" id="gp_eco2" onchange="updateGlobalParam('eco2', this.value)"></div>
-
-              <div><label class="compact-label">Epm (μg/s)</label><input type="number" class="compact-input" id="gp_Epm" onchange="updateGlobalParam('Epm', this.value)"></div>
-              <div><label class="compact-label">kdep (1/s)</label><input type="number" class="compact-input" id="gp_kdep" onchange="updateGlobalParam('kdep', this.value)"></div>
-
-              <div><label class="compact-label">Evoc (mg/s)</label><input type="number" class="compact-input" id="gp_Evoc" onchange="updateGlobalParam('Evoc', this.value)"></div>
-              <div><label class="compact-label">kvoc (1/s)</label><input type="number" class="compact-input" id="gp_kvoc" onchange="updateGlobalParam('kvoc', this.value)"></div>
-
-              <div><label class="compact-label">L_base (dB)</label><input type="number" class="compact-input" id="gp_L_base" onchange="updateGlobalParam('L_base', this.value)"></div>
-              <div><label class="compact-label">L_occ_per (dB)</label><input type="number" class="compact-input" id="gp_L_occ_per" onchange="updateGlobalParam('L_occ_per', this.value)"></div>
-
-              <div><label class="compact-label">τ_noise (s)</label><input type="number" class="compact-input" id="gp_tau_noise" onchange="updateGlobalParam('tau_noise', this.value)"></div>
-              <div><label class="compact-label">Cout (ppm)</label><input type="number" class="compact-input" id="gp_Cout" onchange="updateGlobalParam('Cout', this.value)"></div>
+              <div class="col-span-2 text-tiny text-slate-500">光照模型</div>
+              <div><label class="compact-label">eta</label><input type="number" class="compact-input" id="mp_light_eta" step="0.01" onchange="updateModelParam('light','eta', this.value)"></div>
+              <div><label class="compact-label">epsilonSun</label><input type="number" class="compact-input" id="mp_light_epsilonSun" step="0.1" onchange="updateModelParam('light','epsilonSun', this.value)"></div>
+              <div><label class="compact-label">E_bg</label><input type="number" class="compact-input" id="mp_light_E_bg" step="0.1" onchange="updateModelParam('light','E_bg', this.value)"></div>
+              <div><label class="compact-label">tau_tw</label><input type="number" class="compact-input" id="mp_light_tau_tw" step="1" onchange="updateModelParam('light','tau_tw', this.value)"></div>
+              <div class="col-span-2 text-tiny text-slate-500 border-t border-slate-100 pt-1">温度模型</div>
+              <div><label class="compact-label">dt</label><input type="number" class="compact-input" id="mp_temp_dt" step="1" onchange="updateModelParam('temp','dt', this.value)"></div>
+              <div><label class="compact-label">s_occ</label><input type="number" class="compact-input" id="mp_temp_s_occ" step="0.01" onchange="updateModelParam('temp','s_occ', this.value)"></div>
+              <div><label class="compact-label">k_occ</label><input type="number" class="compact-input" id="mp_temp_k_occ" step="0.000001" onchange="updateModelParam('temp','k_occ', this.value)"></div>
+              <div><label class="compact-label">tau_occ</label><input type="number" class="compact-input" id="mp_temp_tau_occ" step="1" onchange="updateModelParam('temp','tau_occ', this.value)"></div>
+              <div><label class="compact-label">k_ac</label><input type="number" class="compact-input" id="mp_temp_k_ac" step="0.000001" onchange="updateModelParam('temp','k_ac', this.value)"></div>
+              <div><label class="compact-label">tau_ac</label><input type="number" class="compact-input" id="mp_temp_tau_ac" step="1" onchange="updateModelParam('temp','tau_ac', this.value)"></div>
+              <div><label class="compact-label">deltaT_heat_ss</label><input type="number" class="compact-input" id="mp_temp_deltaT_heat_ss" step="0.01" onchange="updateModelParam('temp','deltaT_heat_ss', this.value)"></div>
+              <div><label class="compact-label">k_heat</label><input type="number" class="compact-input" id="mp_temp_k_heat" step="0.000001" onchange="updateModelParam('temp','k_heat', this.value)"></div>
+              <div class="col-span-2 text-tiny text-slate-500 border-t border-slate-100 pt-1">湿度模型</div>
+              <div><label class="compact-label">dt</label><input type="number" class="compact-input" id="mp_humidity_dt" step="1" onchange="updateModelParam('humidity','dt', this.value)"></div>
+              <div><label class="compact-label">alpha</label><input type="number" class="compact-input" id="mp_humidity_alpha" step="0.0000000001" onchange="updateModelParam('humidity','alpha', this.value)"></div>
+              <div><label class="compact-label">beta</label><input type="number" class="compact-input" id="mp_humidity_beta" step="0.0000001" onchange="updateModelParam('humidity','beta', this.value)"></div>
+              <div><label class="compact-label">tau_w</label><input type="number" class="compact-input" id="mp_humidity_tau_w" step="1" onchange="updateModelParam('humidity','tau_w', this.value)"></div>
+              <div><label class="compact-label">s_occ_w</label><input type="number" class="compact-input" id="mp_humidity_s_occ_w" step="0.01" onchange="updateModelParam('humidity','s_occ_w', this.value)"></div>
+              <div><label class="compact-label">s_dehum</label><input type="number" class="compact-input" id="mp_humidity_s_dehum" step="0.01" onchange="updateModelParam('humidity','s_dehum', this.value)"></div>
+              <div class="col-span-2 text-tiny text-slate-500 border-t border-slate-100 pt-1">CO2模型</div>
+              <div><label class="compact-label">dt</label><input type="number" class="compact-input" id="mp_co2_dt" step="1" onchange="updateModelParam('co2','dt', this.value)"></div>
+              <div><label class="compact-label">C_out</label><input type="number" class="compact-input" id="mp_co2_C_out" step="1" onchange="updateModelParam('co2','C_out', this.value)"></div>
+              <div><label class="compact-label">q_person</label><input type="number" class="compact-input" id="mp_co2_q_person" step="0.0000001" onchange="updateModelParam('co2','q_person', this.value)"></div>
+              <div><label class="compact-label">ACH</label><input type="number" class="compact-input" id="mp_co2_ACH" step="0.01" onchange="updateModelParam('co2','ACH', this.value)"></div>
+              <div><label class="compact-label">Q_ref</label><input type="number" class="compact-input" id="mp_co2_Q_ref" step="0.001" onchange="updateModelParam('co2','Q_ref', this.value)"></div>
+              <div><label class="compact-label">s_occ_co2</label><input type="number" class="compact-input" id="mp_co2_s_occ_co2" step="0.01" onchange="updateModelParam('co2','s_occ_co2', this.value)"></div>
+              <div><label class="compact-label">s_vent</label><input type="number" class="compact-input" id="mp_co2_s_vent" step="0.01" onchange="updateModelParam('co2','s_vent', this.value)"></div>
+              <div><label class="compact-label">w_base(t)</label><input type="text" class="compact-input" id="mp_co2_w_base" value="profile:default" onchange="updateModelParam('co2','w_base', this.value)"></div>
             </div>
           </details>
         </div>
@@ -648,107 +644,24 @@
   ========================= */
   const DEVICE_SCHEMA = [
     {
-      id: 'ac',
-      title: '空调',
-      headerToggle: { key: 'acMaster' },
-      controls: [
-        { type: 'range', key: 'acTemp', label: '目标温度', min: 16, max: 30, step: 0.5, unit: '℃', labelId: 'label_acTemp', format: (v)=>Number(v).toFixed(1) + '℃', defaultValue: 25.5 },
-        { type: 'btn', key: 'acFan', label: '风速', options: ['LOW','MID','HIGH'], defaultValue: 'MID' },
-        { type: 'toggleRow', key: 'acDehum', label: '除湿模式', defaultValue: false }
-      ],
-      params: [
-        { group: 'hvac', key: 'K', label: 'K (W/℃)', type: 'number', step: 1 },
-        { group: 'hvac', key: 'Qmax', label: 'Qmax (W)', type: 'number', step: 10 },
-        { group: 'hvac', key: 'COP', label: 'COP', type: 'number', step: 0.1 },
-        { group: 'hvac', key: 'P_acFan_LOW', label: 'P_fan LOW (W)', type: 'number', step: 1 },
-        { group: 'hvac', key: 'P_acFan_MID', label: 'P_fan MID (W)', type: 'number', step: 1 },
-        { group: 'hvac', key: 'P_acFan_HIGH', label: 'P_fan HIGH (W)', type: 'number', step: 1 },
-        { group: 'hvac', key: 'Ddehum', label: '除湿强度 D(0~1)', type: 'number', step: 0.05, min: 0, max: 1 },
-        { group: 'hvac', key: 'RH_dehum_target', label: '除湿目标RH(%)', type: 'number', step: 1, min: 20, max: 70 }
-      ]
-    },
-    {
-      id: 'vent',
-      title: '通风/窗',
+      id: 'core_env',
+      title: '核心环境控制',
       headerToggle: null,
       controls: [
-        { type: 'btn', key: 'ventFan', label: '通风档位', options: ['OFF','LOW','MID','HIGH'], defaultValue: 'MID' },
-        { type: 'range', key: 'winRatio', label: '开窗比例', min: 0, max: 100, step: 1, unit: '%', labelId: 'label_winRatio', format: (v)=>String(v)+'%', defaultValue: 0 }
+        { type: 'range', key: 'curtain', bind: 'core', label: '窗帘', min: 0, max: 100, step: 1, unit: '%', labelId: 'label_curtain', format: (v)=>String(v)+'%', defaultValue: 0 },
+        { type: 'range', key: 'lightPct', bind: 'core', label: '灯', min: 0, max: 100, step: 1, unit: '%', labelId: 'label_lightPct', format: (v)=>String(v)+'%', defaultValue: 0 },
+        { type: 'toggleRow', key: 'coolOn', bind: 'core', label: '空调制冷', defaultValue: true },
+        { type: 'toggleRow', key: 'heatOn', bind: 'core', label: '空调制热', defaultValue: false },
+        { type: 'range', key: 'tempSet', bind: 'core', label: '设定温度', min: 16, max: 30, step: 0.5, unit: '℃', labelId: 'label_tempSet', format: (v)=>Number(v).toFixed(1) + '℃', defaultValue: 25.5 },
+        { type: 'toggleRow', key: 'dehumOn', bind: 'core', label: '除湿', defaultValue: false },
+        { type: 'btn', key: 'ventLevel', bind: 'core', label: '通风', options: ['OFF','LOW','MID','HIGH'], defaultValue: 'MID' }
       ],
       params: [
         { group: 'vent', key: 'ach_LOW', label: 'ACH LOW', type: 'number', step: 0.1 },
         { group: 'vent', key: 'ach_MID', label: 'ACH MID', type: 'number', step: 0.1 },
         { group: 'vent', key: 'ach_HIGH', label: 'ACH HIGH', type: 'number', step: 0.1 },
-        { group: 'vent', key: 'ach_win_max', label: '开窗ACH_max', type: 'number', step: 0.1 },
+        { group: 'vent', key: 'ach_win_max', label: 'ACH 窗户最大', type: 'number', step: 0.1 },
         { group: 'vent', key: 'eta_vent', label: '过滤效率 η', type: 'number', step: 0.05, min: 0, max: 1 }
-      ]
-    },
-    {
-      id: 'light',
-      title: '光照与窗帘',
-      headerToggle: null,
-      controls: [
-        { type: 'range', key: 'lightPct', label: '灯光亮度', min: 0, max: 100, step: 1, unit: '%', labelId: 'label_lightPct', format: (v)=>String(v)+'%', defaultValue: 0 },
-        { type: 'range', key: 'curtain', label: '窗帘开启率', min: 0, max: 100, step: 1, unit: '%', labelId: 'label_curtain', format: (v)=>String(v)+'%', defaultValue: 0 }
-      ],
-      params: [
-        { group: 'light', key: 'N', label: '灯数量 N', type: 'number', step: 1, min: 1 },
-        { group: 'light', key: 'Phi', label: '单灯光通量 Φ(lm)', type: 'number', step: 10, min: 100 },
-        { group: 'light', key: 'CU', label: '利用系数 CU', type: 'number', step: 0.05, min: 0, max: 1 },
-        { group: 'light', key: 'K', label: '维护系数 K', type: 'number', step: 0.05, min: 0, max: 1 },
-        { group: 'light', key: 'P_light_max', label: '最大电功率 Pmax(W)', type: 'number', step: 1, min: 1 },
-        { group: 'light', key: 'eta_heat_light', label: '转热比例 η_heat', type: 'number', step: 0.05, min: 0, max: 1 }
-      ]
-    },
-    {
-      id: 'spk',
-      title: '音箱',
-      headerToggle: { key: 'spkMaster' },
-      controls: [
-        { type: 'range', key: 'spkVol', label: '音量', min: 0, max: 100, step: 1, unit: '', labelId: 'label_spkVol', format: (v)=>String(v), defaultValue: 0 }
-      ],
-      params: [
-        { group: 'audio', key: 'P_spk_max', label: '音箱最大功率(W)', type: 'number', step: 1, min: 1 },
-        { group: 'audio', key: 'L_spk_base', label: '音箱底噪(dB)', type: 'number', step: 1 },
-        { group: 'audio', key: 'L_spk_gain', label: '音箱增益(dB@100%)', type: 'number', step: 1 }
-      ]
-    },
-    {
-      id: 'mic',
-      title: '话筒',
-      headerToggle: { key: 'micMaster' },
-      controls: [
-        { type: 'range', key: 'micGain', label: '增益', min: 0, max: 100, step: 1, unit: '%', labelId: 'label_micGain', format: (v)=>String(v)+'%', defaultValue: 50 }
-      ],
-      params: [
-        { group: 'mic', key: 'P_mic_dev', label: '话筒功率(W@100%)', type: 'number', step: 1, min: 0 },
-        { group: 'mic', key: 'L_mic', label: '话筒声学增益(dB)', type: 'number', step: 1 }
-      ]
-    },
-    {
-      id: 'cam',
-      title: '摄像机',
-      headerToggle: { key: 'camMaster' },
-      controls: [
-        { type: 'btn', key: 'camMode', label: '模式', options: ['LOW','MID','HIGH'], defaultValue: 'MID' },
-        { type: 'note', text: '模式影响摄像机功率与热增益' }
-      ],
-      params: [
-        { group: 'cam', key: 'P_cam_dev', label: '摄像机功率(W@MID)', type: 'number', step: 1, min: 0 },
-        { group: 'cam', key: 'cam_LOW_factor', label: 'LOW系数', type: 'number', step: 0.05, min: 0.1 },
-        { group: 'cam', key: 'cam_HIGH_factor', label: 'HIGH系数', type: 'number', step: 0.05, min: 0.1 }
-      ]
-    },
-    {
-      id: 'sensor',
-      title: '环境检测器',
-      headerToggle: { key: 'sensorMaster' },
-      controls: [
-        { type: 'range', key: 'sensorRate', label: '采样频率', min: 1, max: 60, step: 1, unit: '/min', labelId: 'label_sensorRate', format: (v)=>String(v)+'/min', defaultValue: 30 }
-      ],
-      params: [
-        { group: 'sensor', key: 'P_sensor_dev', label: '检测器功率(W@60/min)', type: 'number', step: 1, min: 0 },
-        { group: 'sensor', key: 'sensor_idle_factor', label: '低频功率系数', type: 'number', step: 0.05, min: 0, max: 1 }
       ]
     }
   ];
@@ -780,8 +693,21 @@
   };
 
   const state = {
-    selection: { school: '', type: '', room: '' },
-    initData: {},
+    selection: { school: '', building: '', room: '' },
+    initData: {
+      weatherType: '阴',
+      fetchTime: '',
+      lampCount: 10,
+      luminousFlux: 1500,
+      area: 62.5,
+      season: '夏',
+      people: 40,
+      height: 3.2,
+      volume: 200,
+      init_temp: 26,
+      init_rh: 55,
+      init_co2: 500
+    },
     simTotalMinutes: 45,
 
     // staged：界面编辑用，不触发仿真
@@ -814,6 +740,14 @@
       L_base: 40, L_occ_per: 25,
       tau_noise: 30,
       Cout: 450
+    },
+
+    // 第二轮新增：按四模型组织的参数结构（默认用于左侧输入与后续公式接入）
+    modelParams: {
+      light: { eta: 0.6, epsilonSun: 30, E_bg: 5, tau_tw: 30 },
+      temp: { dt: 60, s_occ: 1.09, k_occ: 1.175e-05, tau_occ: 1522, k_ac: 2.282e-04, tau_ac: 4382, deltaT_heat_ss: 3.06, k_heat: 2.013e-03 },
+      humidity: { dt: 60, alpha: 1.105e-09, beta: 2.953e-07, tau_w: 7200, s_occ_w: 1.0, s_dehum: 1.0 },
+      co2: { dt: 60, C_out: 442, q_person: 1.784e-07, ACH: 1.19, Q_ref: 0.176, s_occ_co2: 3.582, s_vent: 1.0, w_base: 'profile:default' }
     },
 
     // 第三部分：天气与建筑
@@ -1037,10 +971,33 @@
     syncBtnGroupsActive();
   }
 
+  function stageCoreSetValue(key, value) {
+    if (!state.stagedInterventionControls) syncStagedInterventionControls();
+    const patch = {};
+    patch[key] = (key === 'curtain' || key === 'lightPct' || key === 'tempSet') ? parseFloat(value) : value;
+    state.stagedInterventionControls = mergeCoreControls(state.stagedInterventionControls, patch);
+    syncControlLabel(key, state.stagedInterventionControls[key]);
+    syncBtnGroupsActive();
+  }
+
+  function stageCoreToggle(key, checked) {
+    if (!state.stagedInterventionControls) syncStagedInterventionControls();
+    const patch = {};
+    patch[key] = !!checked;
+    state.stagedInterventionControls = mergeCoreControls(state.stagedInterventionControls, patch);
+  }
+
+  function stageCoreBtn(key, val) {
+    if (!state.stagedInterventionControls) syncStagedInterventionControls();
+    const patch = {};
+    patch[key] = val;
+    state.stagedInterventionControls = mergeCoreControls(state.stagedInterventionControls, patch);
+    syncBtnGroupsActive();
+  }
+
   function syncControlLabel(key, value) {
     const map = {
-      acTemp: 'label_acTemp',
-      winRatio: 'label_winRatio',
+      tempSet: 'label_tempSet',
       curtain: 'label_curtain',
       lightPct: 'label_lightPct',
       spkVol: 'label_spkVol',
@@ -1052,7 +1009,7 @@
     const el = document.getElementById(id);
     if (!el) return;
 
-    if (key === 'acTemp') el.innerText = Number(value).toFixed(1) + '℃';
+    if (key === 'tempSet') el.innerText = Number(value).toFixed(1) + '℃';
     else if (key === 'sensorRate') el.innerText = String(value) + '/min';
     else if (key === 'micGain') el.innerText = String(value) + '%';
     else if (key === 'winRatio' || key === 'curtain' || key === 'lightPct') el.innerText = String(value) + '%';
@@ -1067,7 +1024,9 @@
         const groupId = `group_${ctrl.key}`;
         const container = document.getElementById(groupId);
         if (!container) return;
-        const current = state.stagedControls[ctrl.key];
+        const current = (ctrl.bind === 'core')
+          ? getCurrentCoreControlDraft()[ctrl.key]
+          : state.stagedControls[ctrl.key];
         Array.from(container.children).forEach(btn => {
           const val = btn.getAttribute('data-val');
           if (val === String(current)) btn.classList.add('active');
@@ -1088,6 +1047,54 @@
     runSimulation();
     renderStrategyPanel();
     updateStrategySummary();
+  }
+
+  function recalcRoomVolume() {
+    const area = parseFloat(state.initData.area ?? 0);
+    const height = parseFloat(state.initData.height ?? 0);
+    const volume = Math.max(0, area * height);
+    state.initData.volume = volume;
+    const volEl = document.getElementById('roomVol');
+    if (volEl) volEl.value = volume.toFixed(1);
+  }
+
+  function updateInitField(key, value) {
+    const numericKeys = ['lampCount', 'luminousFlux', 'area', 'people', 'height'];
+    state.initData[key] = numericKeys.includes(key) ? parseFloat(value) : value;
+    if (key === 'lampCount' && isFinite(state.initData.lampCount)) state.deviceParams.light.N = Math.max(1, state.initData.lampCount);
+    if (key === 'luminousFlux' && isFinite(state.initData.luminousFlux)) state.deviceParams.light.Phi = Math.max(100, state.initData.luminousFlux);
+    if (key === 'height' && isFinite(state.initData.height)) {
+      state.building.H = state.initData.height;
+      state.stagedBuilding.H = state.initData.height;
+    }
+    if (key === 'area' || key === 'height') recalcRoomVolume();
+    runSimulation();
+    renderStrategyPanel();
+    updateStrategySummary();
+  }
+
+  function updateModelParam(group, key, value) {
+    const parsed = parseFloat(value);
+    if (!state.modelParams[group]) return;
+    state.modelParams[group][key] = isNaN(parsed) ? value : parsed;
+    // 保持与旧参数最小兼容映射，避免当前公式调用中断
+    if (group === 'co2' && key === 'C_out' && isFinite(parsed)) state.globalParams.Cout = parsed;
+    if (group === 'vent' && key === 'ACH_LOW' && isFinite(parsed)) state.deviceParams.vent.ach_LOW = parsed;
+    runSimulation();
+    renderStrategyPanel();
+    updateStrategySummary();
+  }
+
+  function syncModelParamsUI() {
+    const mp = state.modelParams;
+    const setVal = (id, value) => { const el = document.getElementById(id); if (el) el.value = value; };
+    setVal('mp_light_eta', mp.light.eta); setVal('mp_light_epsilonSun', mp.light.epsilonSun); setVal('mp_light_E_bg', mp.light.E_bg); setVal('mp_light_tau_tw', mp.light.tau_tw);
+    setVal('mp_temp_dt', mp.temp.dt); setVal('mp_temp_s_occ', mp.temp.s_occ); setVal('mp_temp_k_occ', mp.temp.k_occ); setVal('mp_temp_tau_occ', mp.temp.tau_occ);
+    setVal('mp_temp_k_ac', mp.temp.k_ac); setVal('mp_temp_tau_ac', mp.temp.tau_ac); setVal('mp_temp_deltaT_heat_ss', mp.temp.deltaT_heat_ss); setVal('mp_temp_k_heat', mp.temp.k_heat);
+    setVal('mp_humidity_dt', mp.humidity.dt); setVal('mp_humidity_alpha', mp.humidity.alpha); setVal('mp_humidity_beta', mp.humidity.beta); setVal('mp_humidity_tau_w', mp.humidity.tau_w);
+    setVal('mp_humidity_s_occ_w', mp.humidity.s_occ_w); setVal('mp_humidity_s_dehum', mp.humidity.s_dehum);
+    setVal('mp_co2_dt', mp.co2.dt); setVal('mp_co2_C_out', mp.co2.C_out); setVal('mp_co2_q_person', mp.co2.q_person); setVal('mp_co2_ACH', mp.co2.ACH);
+    setVal('mp_co2_Q_ref', mp.co2.Q_ref); setVal('mp_co2_s_occ_co2', mp.co2.s_occ_co2); setVal('mp_co2_s_vent', mp.co2.s_vent); setVal('mp_co2_w_base', mp.co2.w_base);
   }
 
   function ensureDailyAmps(target) {
@@ -1166,12 +1173,16 @@
       `;
 
       const body = card.querySelector(`#body_${dev.id}`);
+      const coreDraft = getCurrentCoreControlDraft();
 
       dev.controls.forEach(ctrl => {
         if (ctrl.type === 'range') {
-          const v = state.stagedControls[ctrl.key];
+          const v = (ctrl.bind === 'core') ? coreDraft[ctrl.key] : state.stagedControls[ctrl.key];
           const labelText = ctrl.format ? ctrl.format(v) : String(v);
           const block = document.createElement('div');
+          const inputHandlers = (ctrl.bind === 'core')
+            ? `oninput="stageCoreSetValue('${ctrl.key}', this.value)" onchange="stageCoreSetValue('${ctrl.key}', this.value)"`
+            : `oninput="stageSetValue('${ctrl.key}', this.value)" onchange="stageSetValue('${ctrl.key}', this.value)"`;
           block.innerHTML = `
             <div class="flex justify-between text-tiny text-slate-400">
               <span>${ctrl.label}</span>
@@ -1180,8 +1191,7 @@
             <input type="range"
               id="${ctrl.key}"
               min="${ctrl.min}" max="${ctrl.max}" step="${ctrl.step}" value="${v}"
-              oninput="stageSetValue('${ctrl.key}', this.value)"
-              onchange="stageSetValue('${ctrl.key}', this.value)"
+              ${inputHandlers}
             >
           `;
           body.appendChild(block);
@@ -1194,18 +1204,21 @@
             btn.className = 'btn-group-item';
             btn.setAttribute('data-val', opt);
             btn.innerText = opt;
-            btn.onclick = () => stageBtn(ctrl.key, opt);
+            btn.onclick = () => (ctrl.bind === 'core' ? stageCoreBtn(ctrl.key, opt) : stageBtn(ctrl.key, opt));
             group.appendChild(btn);
           });
           body.appendChild(group);
         } else if (ctrl.type === 'toggleRow') {
-          const v = !!state.stagedControls[ctrl.key];
+          const v = (ctrl.bind === 'core') ? !!coreDraft[ctrl.key] : !!state.stagedControls[ctrl.key];
+          const onChange = (ctrl.bind === 'core')
+            ? `stageCoreToggle('${ctrl.key}', this.checked)`
+            : `stageToggle('${ctrl.key}', this.checked)`;
           const row = document.createElement('div');
           row.className = "flex justify-between items-center pt-1 border-t border-dashed border-slate-100";
           row.innerHTML = `
             <span class="text-tiny text-slate-500">${ctrl.label}</span>
             <label class="toggle-switch" style="width:24px; height:14px;">
-              <input type="checkbox" id="${ctrl.key}" ${v ? 'checked' : ''} onchange="stageToggle('${ctrl.key}', this.checked)">
+              <input type="checkbox" id="${ctrl.key}" ${v ? 'checked' : ''} onchange="${onChange}">
               <span class="slider"></span>
             </label>
           `;
@@ -1252,8 +1265,9 @@
     });
 
     // 初始同步 label 与 btn active
+    const coreDraftNow = getCurrentCoreControlDraft();
     DEVICE_SCHEMA.forEach(d => d.controls.forEach(c => {
-      if (c.type === 'range') syncControlLabel(c.key, state.stagedControls[c.key]);
+      if (c.type === 'range') syncControlLabel(c.key, c.bind === 'core' ? coreDraftNow[c.key] : state.stagedControls[c.key]);
     }));
     syncBtnGroupsActive();
   }
@@ -1278,12 +1292,12 @@
 
   function pullClassroomData() {
     const school = document.getElementById('schoolSelect').value;
-    const type = document.getElementById('typeSelect').value;
+    const building = document.getElementById('typeSelect').value;
     const room = document.getElementById('roomSelect').value;
 
-    if (!school || !type || !room) return alert("请完整选择学校、类型和教室编号");
+    if (!school || !building || !room) return alert("请完整选择学校、楼宇和教室");
 
-    seed(school + type + room);
+    seed(school + building + room);
 
     const people = Math.floor(randRange(30, 60));
     const init_temp = randRange(26, 30);
@@ -1295,12 +1309,26 @@
     state.indoor.pm25_init = P0_indoor;
     state.outdoor.pm25_out = Pout;
 
+    const area = randRange(55, 75);
+    const height = randRange(3.0, 3.8);
+    const lampCount = Math.floor(randRange(8, 16));
+    const luminousFlux = Math.floor(randRange(1200, 2200));
+    const seasons = ['春', '夏', '秋', '冬'];
+    const weatherKinds = ['阴', '多云', '晴'];
     const mockInit = {
+      weatherType: weatherKinds[Math.floor(randRange(0, weatherKinds.length))],
+      fetchTime: new Date().toLocaleString('zh-CN', { hour12: false }),
+      lampCount,
+      luminousFlux,
+      area: Number(area.toFixed(1)),
+      season: seasons[Math.floor(randRange(0, seasons.length))],
       people: people, volume: 200,
+      height: Number(height.toFixed(1)),
       init_temp: init_temp, init_rh: init_rh,
       init_co2: 450 + randRange(0, 100),
       init_pm: P0_indoor
     };
+    mockInit.volume = Number((mockInit.area * mockInit.height).toFixed(1));
 
     const pulledWeather = {
       ...state.stagedWeather,
@@ -1311,13 +1339,26 @@
     };
     ensureDailyAmps(pulledWeather);
 
-    for (let k in mockInit) {
-      const el = document.querySelector(`input[data-key="${k}"]`);
-      if (el) el.value = Number(mockInit[k]).toFixed(0);
-    }
+    const setEl = (id, value) => { const el = document.getElementById(id); if (el) el.value = value; };
+    setEl('initWeatherType', mockInit.weatherType);
+    setEl('initFetchTime', mockInit.fetchTime);
+    setEl('initLampCount', mockInit.lampCount);
+    setEl('initLumens', mockInit.luminousFlux);
+    setEl('initArea', mockInit.area);
+    setEl('initSeason', mockInit.season);
+    setEl('initPeople', Math.round(mockInit.people));
+    setEl('initHeight', mockInit.height);
+    setEl('roomVol', mockInit.volume);
+    setEl('initTemp', Number(mockInit.init_temp).toFixed(1));
+    setEl('initRH', Number(mockInit.init_rh).toFixed(1));
+    setEl('initCO2', Number(mockInit.init_co2).toFixed(0));
 
-    state.selection = { school, type, room };
+    state.selection = { school, building, room };
     state.initData = mockInit;
+    state.deviceParams.light.N = mockInit.lampCount;
+    state.deviceParams.light.Phi = mockInit.luminousFlux;
+    state.building.H = mockInit.height;
+    state.stagedBuilding.H = mockInit.height;
     setInputStatus('pulled');
 
     // 同步天气初值（mean 取拉取数据）
@@ -1339,7 +1380,7 @@
     renderStrategyPanel();
     updateStrategySummary();
 
-    addSysLog(`初始化数据加载成功: ${school}-${type}-${room}`);
+    addSysLog(`初始化数据加载成功: ${school}-${building}-${room}`);
   }
 
   /* =========================
@@ -1365,6 +1406,11 @@
     state.stagedInterventionControls = getCurrentCoreControlDraft();
     state.interventions = [];
     state.problemText = null;
+    state.selection = { school: '', building: '', room: '' };
+    state.initData = {
+      weatherType: '阴', fetchTime: '', lampCount: 10, luminousFlux: 1500, area: 62.5, season: '夏',
+      people: 40, height: 3.2, volume: 200, init_temp: 26, init_rh: 55, init_co2: 500
+    };
     state.stagedWeather = deepClone(DEFAULT_WEATHER);
     state.weather = deepClone(DEFAULT_WEATHER);
     state.stagedBuilding = deepClone(DEFAULT_BUILDING);
@@ -1386,34 +1432,20 @@
      第三部分 UI 同步
   ========================= */
   function syncThirdPartUI() {
-    // 天气
-    document.getElementById('wx_mode').value = state.stagedWeather.mode;
-    document.getElementById('wx_T_mean').value = state.stagedWeather.T_mean;
-    document.getElementById('wx_T_amp').value = state.stagedWeather.T_amp;
-    document.getElementById('wx_RH_mean').value = state.stagedWeather.RH_mean;
-    document.getElementById('wx_RH_amp').value = state.stagedWeather.RH_amp;
-    document.getElementById('wx_PM_mean').value = state.stagedWeather.PM_mean;
-    document.getElementById('wx_PM_amp').value = state.stagedWeather.PM_amp;
-    document.getElementById('wx_E_mean').value = state.stagedWeather.E_mean;
-    document.getElementById('wx_E_amp').value = state.stagedWeather.E_amp;
-
-    // 建筑
-    document.getElementById('bd_UA').value = state.stagedBuilding.UA;
-    document.getElementById('bd_H').value = state.stagedBuilding.H;
-    document.getElementById('bd_ach_inf').value = state.stagedBuilding.ach_inf;
-    document.getElementById('bd_alphaCurtain').value = state.stagedBuilding.alphaCurtain;
-
-    // 全局参数（可编辑项）
-    document.getElementById('gp_Qocc_per').value = state.globalParams.Qocc_per;
-    document.getElementById('gp_eco2').value = state.globalParams.eco2;
-    document.getElementById('gp_Epm').value = state.globalParams.Epm;
-    document.getElementById('gp_kdep').value = state.globalParams.kdep;
-    document.getElementById('gp_Evoc').value = state.globalParams.Evoc;
-    document.getElementById('gp_kvoc').value = state.globalParams.kvoc;
-    document.getElementById('gp_L_base').value = state.globalParams.L_base;
-    document.getElementById('gp_L_occ_per').value = state.globalParams.L_occ_per;
-    document.getElementById('gp_tau_noise').value = state.globalParams.tau_noise;
-    document.getElementById('gp_Cout').value = state.globalParams.Cout;
+    const setVal = (id, value) => { const el = document.getElementById(id); if (el) el.value = value; };
+    setVal('initWeatherType', state.initData.weatherType || '阴');
+    setVal('initFetchTime', state.initData.fetchTime || '');
+    setVal('initLampCount', state.initData.lampCount ?? 10);
+    setVal('initLumens', state.initData.luminousFlux ?? 1500);
+    setVal('initArea', state.initData.area ?? 62.5);
+    setVal('initSeason', state.initData.season || '夏');
+    setVal('initPeople', state.initData.people ?? 40);
+    setVal('initHeight', state.initData.height ?? 3.2);
+    setVal('roomVol', state.initData.volume ?? 200);
+    setVal('initTemp', state.initData.init_temp ?? 26);
+    setVal('initRH', state.initData.init_rh ?? 55);
+    setVal('initCO2', state.initData.init_co2 ?? 500);
+    syncModelParamsUI();
   }
 
   /* =========================
@@ -1602,7 +1634,7 @@
   }
 
   function buildStrategySummaryText() {
-    const hasPulled = !!(state.selection && state.selection.school && state.selection.type && state.selection.room);
+    const hasPulled = !!(state.selection && state.selection.school && state.selection.building && state.selection.room);
     const lines = [];
 
     if (hasPulled) {
@@ -2226,7 +2258,7 @@
   ========================= */
   function exportStrategy() {
     const totalMin = clamp(state.simTotalMinutes, 0, 1440);
-    const header = `教室环境仿真与干预策略导出\n\n教室：${state.selection.school || '-'} / ${state.selection.type || '-'} / ${state.selection.room || '-'}\n仿真时长：${totalMin} 分钟\n导出时间：${new Date().toLocaleString('zh-CN', { hour12: false })}\n\n`;
+    const header = `教室环境仿真与干预策略导出\n\n教室：${state.selection.school || '-'} / ${state.selection.building || '-'} / ${state.selection.room || '-'}\n仿真时长：${totalMin} 分钟\n导出时间：${new Date().toLocaleString('zh-CN', { hour12: false })}\n\n`;
     const strategy = `策略汇总：\n${buildStrategySummaryText()}\n\n`;
     const content = header + strategy;
 
