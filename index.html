@@ -795,10 +795,13 @@
       sensorMaster: true, sensorRate: 30
     },
 
-    // baseline：时间段外使用（拉取数据后固定为当前 staged 的快照）
+    // baseline：核心环境控制的基线（时间段外使用）
     baselineControls: null,
 
-    // applied：策略列表（每条策略保存当时 staged 的快照）
+    // 待应用的核心环境控制草稿（避免直接保存整包 stagedControls）
+    stagedInterventionControls: null,
+
+    // applied：字段级策略列表（changes 仅保存核心字段）
     interventions: [],
 
     // 全局（跨设备/校准）参数
@@ -885,6 +888,64 @@
   }
   function addSysLog(msg) { console.log(msg); }
 
+  const CORE_VENT_LEVELS = ['OFF', 'LOW', 'MID', 'HIGH'];
+  function normalizeVentLevel(val) {
+    const v = String(val || 'OFF').toUpperCase();
+    return CORE_VENT_LEVELS.includes(v) ? v : 'OFF';
+  }
+
+  // 统一核心环境控制字段，后续轮次均基于该结构叠加
+  function normalizeControlsToCoreShape(raw = {}) {
+    const acOn = !!raw.acMaster;
+    const fanLevel = normalizeVentLevel(raw.acFan ?? 'MID');
+    const tempSet = clamp(parseFloat(raw.tempSet ?? raw.acTemp ?? 25.5), 16, 32);
+    return {
+      curtain: clamp(parseFloat(raw.curtain ?? 0), 0, 100),
+      lightPct: clamp(parseFloat(raw.lightPct ?? raw.u_light ?? 0), 0, 100),
+      coolOn: (raw.coolOn !== undefined) ? !!raw.coolOn : acOn,
+      heatOn: (raw.heatOn !== undefined) ? !!raw.heatOn : false,
+      tempSet,
+      dehumOn: (raw.dehumOn !== undefined) ? !!raw.dehumOn : !!raw.acDehum,
+      ventLevel: normalizeVentLevel(raw.ventLevel ?? raw.u_vent ?? raw.ventFan ?? fanLevel)
+    };
+  }
+
+  function getCurrentCoreControlDraft() {
+    return normalizeControlsToCoreShape(state.stagedInterventionControls || state.stagedControls);
+  }
+
+  function mergeCoreControls(base, patch) {
+    return normalizeControlsToCoreShape({ ...(base || {}), ...(patch || {}) });
+  }
+
+  function sanitizeInterventionRange(startInput, endInput, totalMinutes) {
+    let startMin = parseInt(startInput ?? '0', 10);
+    let endMin = (endInput === '' || endInput === null || endInput === undefined)
+      ? totalMinutes
+      : parseInt(endInput, 10);
+    if (!isFinite(startMin)) startMin = 0;
+    if (!isFinite(endMin)) endMin = totalMinutes;
+    startMin = clamp(startMin, 0, totalMinutes);
+    endMin = clamp(endMin, 0, totalMinutes);
+    return { startMin, endMin, valid: (startMin < endMin) };
+  }
+
+  function mapCoreToLegacyControls(core, fallback = {}) {
+    const legacy = deepClone(fallback || {});
+    legacy.curtain = core.curtain;
+    legacy.lightPct = core.lightPct;
+    legacy.acMaster = !!(core.coolOn || core.heatOn);
+    legacy.acTemp = core.tempSet;
+    legacy.acFan = normalizeVentLevel(legacy.acFan || 'MID');
+    legacy.acDehum = !!core.dehumOn;
+    legacy.ventFan = core.ventLevel;
+    return legacy;
+  }
+
+  function syncStagedInterventionControls() {
+    state.stagedInterventionControls = getCurrentCoreControlDraft();
+  }
+
   function setInputStatus(status) {
     document.querySelectorAll('input[data-status]').forEach(el => {
       el.setAttribute('data-status', status);
@@ -937,17 +998,20 @@
   ========================= */
   function stageSetValue(key, value) {
     state.stagedControls[key] = value;
+    syncStagedInterventionControls();
     syncControlLabel(key, value);
     syncBtnGroupsActive();
   }
 
   function stageToggle(key, checked) {
     state.stagedControls[key] = !!checked;
+    syncStagedInterventionControls();
     syncControlLabel(key, checked);
   }
 
   function stageBtn(key, val) {
     state.stagedControls[key] = val;
+    syncStagedInterventionControls();
     syncBtnGroupsActive();
   }
 
@@ -1238,8 +1302,9 @@
     state.stagedWeather = deepClone(pulledWeather);
     state.weather = deepClone(pulledWeather);
 
-    // 固定基线（外时段使用）
-    state.baselineControls = deepClone(state.stagedControls);
+    // 固定核心基线（外时段使用）
+    state.stagedInterventionControls = getCurrentCoreControlDraft();
+    state.baselineControls = deepClone(state.stagedInterventionControls);
 
     // 清空策略
     state.interventions = [];
@@ -1275,6 +1340,7 @@
     };
 
     state.baselineControls = null;
+    state.stagedInterventionControls = getCurrentCoreControlDraft();
     state.interventions = [];
     state.problemText = null;
     state.stagedWeather = deepClone(DEFAULT_WEATHER);
@@ -1331,31 +1397,44 @@
   /* =========================
      applied：策略应用与读取
   ========================= */
-  function getActiveControlsAtMinute(minute) {
-    const base = state.baselineControls ? state.baselineControls : state.stagedControls;
-    let active = deepClone(base);
+  function getActiveInterventionsAtMinute(minute) {
+    return state.interventions.filter(ev => minute >= ev.startMin && minute < ev.endMin);
+  }
 
-    for (let i = 0; i < state.interventions.length; i++) {
-      const ev = state.interventions[i];
-      if (minute >= ev.startMin && minute < ev.endMin) {
-        active = deepClone(ev.controls);
-      }
-    }
-    return active;
+  // 字段冲突统一在此处理：同字段“后添加优先”
+  function resolveFieldConflicts(activeInterventions) {
+    const resolved = {};
+    activeInterventions.forEach(ev => {
+      const changes = normalizeControlsToCoreShape(ev.changes || {});
+      Object.keys(changes).forEach((field) => {
+        resolved[field] = changes[field];
+      });
+    });
+    return resolved;
+  }
+
+  function buildEffectiveCoreControls(minute) {
+    const base = state.baselineControls
+      ? normalizeControlsToCoreShape(state.baselineControls)
+      : normalizeControlsToCoreShape(state.stagedControls);
+    const activeInterventions = getActiveInterventionsAtMinute(minute);
+    const mergedChanges = resolveFieldConflicts(activeInterventions);
+    return mergeCoreControls(base, mergedChanges);
+  }
+
+  function getActiveControlsAtMinute(minute) {
+    const core = buildEffectiveCoreControls(minute);
+    // 兼容旧版 runSimulation：返回值继续带旧字段
+    return mapCoreToLegacyControls(core, state.stagedControls);
   }
 
   function applyIntervention() {
     const totalMin = clamp(state.simTotalMinutes, 0, 1440);
+    const startRaw = document.getElementById('cmdStartMin').value;
+    const endRaw = document.getElementById('cmdEndMin').value;
+    const range = sanitizeInterventionRange(startRaw, endRaw, totalMin);
 
-    let startMin = parseInt(document.getElementById('cmdStartMin').value || '0', 10);
-    let endMin = parseInt(document.getElementById('cmdEndMin').value || '1', 10);
-    if (isNaN(startMin)) startMin = 0;
-    if (isNaN(endMin)) endMin = 1;
-
-    startMin = clamp(startMin, 0, totalMin);
-    endMin = clamp(endMin, 0, totalMin);
-
-    if (!(startMin < endMin)) {
+    if (!range.valid) {
       alert("干预时间段不合法：需要满足 0 <= start < end <= 仿真时长");
       syncCmdRangeUI();
       return;
@@ -1363,18 +1442,27 @@
 
     if (!state.baselineControls) {
       // 未拉取数据时，也允许把当前编辑当作基线
-      state.baselineControls = deepClone(state.stagedControls);
+      state.baselineControls = normalizeControlsToCoreShape(state.stagedControls);
     }
 
-    const snapshot = deepClone(state.stagedControls);
-    state.interventions.push({ startMin, endMin, controls: snapshot, createdAt: Date.now() });
+    syncStagedInterventionControls();
+    const changes = getCurrentCoreControlDraft();
+    state.interventions.push({
+      id: `iv_${Date.now()}_${state.interventions.length + 1}`,
+      startMin: range.startMin,
+      endMin: range.endMin,
+      changes,
+      createdAt: Date.now(),
+      priority: state.interventions.length + 1,
+      source: 'manual'
+    });
 
     runSimulation();
     renderStrategyPanel();
     updateStrategySummary();
     scrollStrategyToBottom();
 
-    addSysLog(`已应用干预：${startMin}–${endMin}min`);
+    addSysLog(`已应用干预：${range.startMin}–${range.endMin}min`);
   }
 
   function deleteIntervention(index) {
@@ -1469,6 +1557,11 @@
     return parts.join(' ');
   }
 
+  function getInterventionDisplayControls(ev) {
+    const core = normalizeControlsToCoreShape(ev?.changes || {});
+    return mapCoreToLegacyControls(core, state.stagedControls);
+  }
+
   function buildStrategySummaryText() {
     const hasPulled = !!(state.selection && state.selection.school && state.selection.type && state.selection.room);
     const lines = [];
@@ -1478,7 +1571,7 @@
       lines.push(`发现问题：${problem}。`);
       for (let i = 0; i < state.interventions.length; i++) {
         const ev = state.interventions[i];
-        lines.push(`策略${i+1}：${ev.startMin}–${ev.endMin}min ${summarizeControlsForStrategy(ev.controls)}`);
+        lines.push(`策略${i+1}：${ev.startMin}–${ev.endMin}min ${summarizeControlsForStrategy(getInterventionDisplayControls(ev))}`);
       }
     } else {
       lines.push("暂无策略。请先拉取数据。");
@@ -1550,7 +1643,7 @@
         <div class="flex items-start justify-between gap-2">
           <div class="flex-1 space-y-1">
             <div class="font-semibold">策略${i+1}：${ev.startMin}–${ev.endMin}min</div>
-            <div class="text-tiny text-slate-600">${summarizeControlsForStrategy(ev.controls)}</div>
+            <div class="text-tiny text-slate-600">${summarizeControlsForStrategy(getInterventionDisplayControls(ev))}</div>
             <div class="text-tiny text-slate-500">${resText}</div>
             <div class="text-tiny text-slate-500">${compText}</div>
           </div>
@@ -2121,6 +2214,7 @@
     state.weather.mode = 'daily';
     ensureDailyAmps(state.stagedWeather);
     ensureDailyAmps(state.weather);
+    syncStagedInterventionControls();
     syncSimDurationUI();
     syncCmdRangeUI();
     syncThirdPartUI();
