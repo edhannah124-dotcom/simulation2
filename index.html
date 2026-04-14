@@ -437,7 +437,7 @@
                 <option value="春">春</option><option value="夏">夏</option><option value="秋">秋</option><option value="冬">冬</option>
               </select>
             </div>
-            <div><label class="compact-label">人数</label><input type="number" id="initPeople" data-key="people" data-status="default" class="compact-input" value="0"></div>
+            <div><label class="compact-label">人数</label><input type="number" id="initPeople" data-key="people" data-status="default" class="compact-input" value="0" onchange="updateInitField('people', this.value)"></div>
             <div><label class="compact-label">教室高度H(m)</label><input type="number" id="initHeight" class="compact-input" min="2" step="0.1" onchange="updateInitField('height', this.value)"></div>
             <div class="col-span-2"><label class="compact-label">体积V=A×H (m³)</label><input type="number" id="roomVol" data-key="volume" data-status="default" class="compact-input" value="0" readonly></div>
           </div>
@@ -694,6 +694,7 @@
 
   const state = {
     selection: { school: '', building: '', room: '' },
+    // initData：左侧主初始化字段；people/height/volume/lampCount/luminousFlux 已参与当前逻辑，其余字段先用于展示与后续扩展
     initData: {
       weatherType: '阴',
       fetchTime: '',
@@ -742,7 +743,7 @@
       Cout: 450
     },
 
-    // 第二轮新增：按四模型组织的参数结构（默认用于左侧输入与后续公式接入）
+    // modelParams：第二轮仅完成结构与编辑入口；当前仅少量兼容映射（如 co2.C_out->globalParams.Cout），其余为第三轮公式预留
     modelParams: {
       light: { eta: 0.6, epsilonSun: 30, E_bg: 5, tau_tw: 30 },
       temp: { dt: 60, s_occ: 1.09, k_occ: 1.175e-05, tau_occ: 1522, k_ac: 2.282e-04, tau_ac: 4382, deltaT_heat_ss: 3.06, k_heat: 2.013e-03 },
@@ -1060,7 +1061,13 @@
 
   function updateInitField(key, value) {
     const numericKeys = ['lampCount', 'luminousFlux', 'area', 'people', 'height'];
-    state.initData[key] = numericKeys.includes(key) ? parseFloat(value) : value;
+    if (numericKeys.includes(key)) {
+      const parsed = parseFloat(value);
+      if (!isFinite(parsed)) return;
+      state.initData[key] = parsed;
+    } else {
+      state.initData[key] = value;
+    }
     if (key === 'lampCount' && isFinite(state.initData.lampCount)) state.deviceParams.light.N = Math.max(1, state.initData.lampCount);
     if (key === 'luminousFlux' && isFinite(state.initData.luminousFlux)) state.deviceParams.light.Phi = Math.max(100, state.initData.luminousFlux);
     if (key === 'height' && isFinite(state.initData.height)) {
@@ -1863,13 +1870,15 @@
     const cam = state.deviceParams.cam;
     const sensor = state.deviceParams.sensor;
 
+    const init = state.initData || {};
     const inputs = {
-      N: safeNum('initPeople', 40),
-      V: Math.max(20, safeNum('roomVol', 200)),
-      T_init: safeNum('initTemp', 25),
-      RH_init: safeNum('initRH', 50),
-      C_init: safeNum('initCO2', gp.Cout ?? 450),
-      P_init: safeNum('initPM', (state.indoor.pm25_init > 0 ? state.indoor.pm25_init : 20)),
+      // 现阶段优先读取 state.initData；DOM 仅作兼容回退，避免依赖已下线控件
+      N: isFinite(parseFloat(init.people)) ? parseFloat(init.people) : safeNum('initPeople', 40),
+      V: Math.max(20, isFinite(parseFloat(init.volume)) ? parseFloat(init.volume) : safeNum('roomVol', 200)),
+      T_init: isFinite(parseFloat(init.init_temp)) ? parseFloat(init.init_temp) : safeNum('initTemp', 25),
+      RH_init: isFinite(parseFloat(init.init_rh)) ? parseFloat(init.init_rh) : safeNum('initRH', 50),
+      C_init: isFinite(parseFloat(init.init_co2)) ? parseFloat(init.init_co2) : safeNum('initCO2', gp.Cout ?? 450),
+      P_init: (state.indoor.pm25_init > 0 ? state.indoor.pm25_init : 20),
       Cout: gp.Cout ?? 450,
       Vout: 0.03,
       Voc_init: 0.1
